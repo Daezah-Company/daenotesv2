@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'ds_theme.dart';
+import 'ds_motion.dart';
 import 'ds_tokens.dart';
 import 'ds_typography.dart';
 
@@ -102,22 +103,25 @@ class DsButton extends StatelessWidget {
       ],
     );
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 40, minWidth: 44),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(Ds.radiusSm),
-          border: borderColor.a == 0 ? null : Border.all(color: borderColor),
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            onTap: onPressed,
+    return DsPressable(
+      enabled: enabled,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 40, minWidth: 44),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: bg,
             borderRadius: BorderRadius.circular(Ds.radiusSm),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Ds.s4),
-              child: content,
+            border: borderColor.a == 0 ? null : Border.all(color: borderColor),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: onPressed,
+              borderRadius: BorderRadius.circular(Ds.radiusSm),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Ds.s4),
+                child: content,
+              ),
             ),
           ),
         ),

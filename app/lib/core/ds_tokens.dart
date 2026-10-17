@@ -73,6 +73,6 @@ abstract final class Ds {
 
   // ------------------------------------------------------------------ misc
   static const double hairline = 1;
-  static const Duration motionQuick = Duration(milliseconds: 180);
-  static const Duration motionThreadDraw = Duration(milliseconds: 420);
+  // Motion lives in `DsMotion` (ds_motion.dart) — one curve family, one
+  // duration palette, so nothing moves on an ad-hoc timing.
 }

@@ -17,13 +17,8 @@ class NoteEditorSheet extends ConsumerStatefulWidget {
   final String initialTitle;
 
   static Future<void> show(BuildContext context, {String initialTitle = ''}) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.dae.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Ds.radiusLg)),
-      ),
+    return showDsSheet<void>(
+      context,
       builder: (sheetContext) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,

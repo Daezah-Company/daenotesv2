@@ -42,9 +42,8 @@ class ReminderSheet extends ConsumerStatefulWidget {
     required DateTime initial,
     String title = 'Pengingat',
   }) {
-    return showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
+    return showDsSheet<String>(
+      context,
       backgroundColor: Colors.transparent,
       builder: (_) =>
           ReminderSheet(todoUuid: todoUuid, initial: initial, title: title),
@@ -112,14 +111,20 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
                 ),
                 const SizedBox(height: Ds.s4),
                 // Wall-clock readout — mono, the sanctioned utility face.
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    DsText.section(_dayWord(_when)),
-                    const SizedBox(width: Ds.s3),
-                    DsText.timestamp(DsTime.clock(_when)),
-                  ],
+                AnimatedSwitcher(
+                  duration: DsMotion.standard,
+                  switchInCurve: DsMotion.enter,
+                  switchOutCurve: DsMotion.exit,
+                  child: Row(
+                    key: ValueKey(_when),
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      DsText.section(_dayWord(_when)),
+                      const SizedBox(width: Ds.s3),
+                      DsText.timestamp(DsTime.clock(_when)),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: Ds.s4),
                 Wrap(
@@ -253,22 +258,26 @@ class _ShortcutChip extends StatelessWidget {
     final border = selected
         ? Ds.threadRose
         : dae.hairline.withValues(alpha: 0.4);
-    return GestureDetector(
-      onTap: onTap,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(Ds.radiusSm),
-          border: Border.all(
-            color: border,
-            width: selected ? 1.5 : Ds.hairline,
+    return DsPressable(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: DsMotion.standard,
+          curve: DsMotion.onScreen,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(Ds.radiusSm),
+            border: Border.all(
+              color: border,
+              width: selected ? 1.5 : Ds.hairline,
+            ),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Ds.s3,
-            vertical: Ds.s2,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Ds.s3,
+              vertical: Ds.s2,
+            ),
+            child: DsText.caption(label),
           ),
-          child: DsText.caption(label),
         ),
       ),
     );

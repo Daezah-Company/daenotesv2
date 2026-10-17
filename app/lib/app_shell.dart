@@ -96,13 +96,18 @@ class _SyncDot extends StatelessWidget {
           : 'Sudah tersinkron',
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: Ds.s2),
-        child: Container(
-          width: 9,
-          height: 9,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color ?? Colors.transparent,
-            border: Border.all(color: color ?? dae.onSurfaceSecondary),
+        child: DsPulse(
+          active: phase == SyncPhase.syncing,
+          child: AnimatedContainer(
+            duration: DsMotion.standard,
+            curve: DsMotion.onScreen,
+            width: 9,
+            height: 9,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color ?? Colors.transparent,
+              border: Border.all(color: color ?? dae.onSurfaceSecondary),
+            ),
           ),
         ),
       ),

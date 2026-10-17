@@ -1,8 +1,14 @@
 # HANDOFF
 
 Status 2026-10-18: semua permintaan di bawah sudah landed dan terverifikasi
-(`flutter analyze` bersih, 101 test Flutter hijau, 66 test backend hijau).
+(`flutter analyze` bersih, 113 test Flutter hijau, 66 test backend hijau).
 File ini ditinggalkan sebagai catatan riwayat, bukan antrean kerja.
+
+Yang masih perlu dilakukan **manusia** sebelum testing visual: mesin ini belum punya
+JDK 17 (sehingga `flutter build apk` tidak jalan) dan `libsecret-1-dev` (build linux
+gagal di linking). Verifikasi sejauh ini berhenti di `flutter analyze` + `flutter test` +
+`flutter build bundle`. Keputusan motion terbaru dicatat di DECISIONS.md
+("Keputusan motion — satu kosakata `DsMotion`").
 
 ## NOTES-TODOS agent
 

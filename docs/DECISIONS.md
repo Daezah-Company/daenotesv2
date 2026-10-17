@@ -134,3 +134,49 @@ jadi seluruh konsep `serverId` lokal sudah dibuang. Isi sekarang:
 - Copy permukaan produk satu bahasa: Beranda / Graf / Pengingat, "benang", "tautan",
   "belum tertaut" — termasuk label Semantics graph dan tooltip status sinkron. Tombol
   cari mati di header shell dibuang (inbox sudah punya pencarian sendiri).
+
+# Keputusan motion — satu kosakata `DsMotion`
+
+- Kepribadian gerak: **calm/premium** — tanpa bounce/overshoot; masuk melambat
+  (`enter = Cubic(0.05, 0.7, 0.1, 1)`), keluar mempercepat (`exit = Cubic(0.4, 0, 1, 1)`),
+  perubahan on-screen mulus di kedua ujung (`onScreen = Cubic(0.2, 0, 0, 1)`). Durasi dan
+  kurva tidak ditulis inline di feature lagi; semuanya lewat `app/lib/core/ds_motion.dart`,
+  dan token lama `Ds.motionQuick`/`Ds.motionThreadDraw` dihapus supaya tidak ada dua sumber
+  kebenaran.
+- Budget durasi: `press 110` / `release 190` untuk sentuhan, `micro 150` untuk perubahan
+  kecil, `standard 240` untuk state, `panel 320` untuk elemen yang membuka, `page 420` /
+  `pageExit 260` untuk rute (masuk > keluar), `railDraw 420` dan `canvasReveal 1100` khusus
+  untuk tanda tangan produk (gambar benang).
+- Stagger daftar dibatasi: `DsMotion.stagger = 34ms` dengan plafon baris ke-`staggerLastRow`
+  (8) sehingga kaskade total tidak melewati 500ms walau daftarnya panjang. `DsEnter`
+  melipat delay ke dalam `Interval` milik `TweenAnimationBuilder`, jadi tidak ada `Timer`
+  yang menggantung dan `pumpAndSettle` tetap selesai di test.
+- **Gambar benang di-clip, bukan di-layout.** Rail dulu tumbuh dengan `LayoutBuilder` yang
+  mengukur tinggi; itu melempar "LayoutBuilder does not support returning intrinsic
+  dimensions" begitu rail masuk `DsCard` (card memakai `IntrinsicHeight` untuk memberi
+  tinggi ke rail). Sekarang rail selalu menempati tinggi penuh di layout dan hanya
+  `ClipRect` + `_DrawDownClipper` yang tumbuh ke bawah. Konsekuensinya test yang dulu
+  mengecek tinggi box sekarang mengecek `clipper.getClip(...)`, dan `DsCard` tetap bisa
+  dipakai di dalam `ListView`.
+- Tab switch **sengaja tidak** diberi cross-fade antar branch: shell tetap
+  `StatefulShellRoute.indexedStack` supaya scroll position dan state graf bertahan. Rasa
+  "pindah tab yang mulus" datang dari garis bawah yang bergerak sebagai satu bar
+  (`AnimatedPositioned` di `DsTabBar`) plus stagger baris per layar.
+- Transisi rute detail/auth memakai `DsRouteTransition` lewat `pageBuilder`: halaman masuk
+  bergerak 24px + fade; halaman keluar menyusut 4% dan meredup 45% dan sudah selesai sebelum
+  halaman baru mendarat (via `secondaryAnimation`), jadi tidak ada frame dengan dua halaman
+  yang terasa sama penting.
+- Sheet tidak lagi memanggil `showModalBottomSheet` langsung; semua lewat
+  `app/lib/core/ds_sheet.dart::showDsSheet` supaya warna permukaan, radius atas, dan
+  `sheetAnimationStyle` (buka `panel/enter`, tutup `standard/exit`) identik di mana-mana.
+- Reduce-motion adalah jalur pertama, bukan tempelan: `context.reduceMotion`
+  (`MediaQuery.maybeDisableAnimationsOf`) membuang displacement dan menjaga opacity —
+  `DsEnter` tidak memasang `Transform`, underline tab pakai `Positioned` biasa, `DsPulse`
+  berhenti (tidak ada animasi loop yang membuat test tidak pernah settle), `showDsSheet`
+  berdurasi nol. Dikunci di `app/test/ds_motion_test.dart`.
+- Copy: "dentang" (typo satu-satunya di repo, `reminders_screen.dart`) → "terjadwal";
+  tidak ada test yang mengklaim teks lama.
+- Verifikasi: `flutter analyze` bersih, `dart format` bersih, 113/113 test hijau,
+  `flutter build bundle` debug + release exit 0. **Pengecekan visual belum dilakukan** —
+  mesin ini tidak punya JDK (APK tidak bisa dibangun) dan `libsecret-1-dev` belum ada
+  (build linux gagal), jadi rasa gerak masih perlu dinilai user setelah toolchain lengkap.

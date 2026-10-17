@@ -55,27 +55,35 @@ class _Segment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: DsType.eyebrow(
-              color: active ? activeColor : idleColor,
-              weight: active ? FontWeight.w600 : FontWeight.w500,
-            ),
+    return DsPressable(
+      pressScale: 0.94,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: IntrinsicWidth(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AnimatedDefaultTextStyle(
+                duration: DsMotion.standard,
+                curve: DsMotion.onScreen,
+                style: DsType.eyebrow(
+                  color: active ? activeColor : idleColor,
+                  weight: active ? FontWeight.w600 : FontWeight.w500,
+                ),
+                child: Text(label.toUpperCase()),
+              ),
+              const SizedBox(height: 5),
+              AnimatedContainer(
+                duration: DsMotion.standard,
+                curve: DsMotion.onScreen,
+                height: 2,
+                color: active ? activeColor : Colors.transparent,
+              ),
+            ],
           ),
-          SizedBox(height: active ? 4 : 6),
-          AnimatedContainer(
-            duration: Ds.motionQuick,
-            height: 2,
-            color: active ? activeColor : Colors.transparent,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -98,24 +106,52 @@ class DsCheckToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dae = context.dae;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: done ? dae.onSurface : Colors.transparent,
-            border: Border.all(
-              color: done ? dae.onSurface : dae.onSurfaceSecondary,
-              width: 1.5,
-            ),
+    final reduced = context.reduceMotion;
+    return DsPressable(
+      enabled: onTap != null,
+      pressScale: 0.88,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              AnimatedContainer(
+                duration: DsMotion.micro,
+                curve: DsMotion.onScreen,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: done ? dae.onSurface : Colors.transparent,
+                  border: Border.all(
+                    color: done ? dae.onSurface : dae.onSurfaceSecondary,
+                    width: 1.5,
+                  ),
+                ),
+              ),
+              // The check arrives a beat after the fill, so completing a todo
+              // reads as two events (confirm, then mark) instead of a swap.
+              AnimatedOpacity(
+                opacity: done ? 1 : 0,
+                duration: DsMotion.release,
+                curve: DsMotion.enter,
+                child: AnimatedScale(
+                  scale: done ? 1 : 0.55,
+                  duration: reduced
+                      ? Duration.zero
+                      : DsMotion.standard, // spatial — off under reduce-motion
+                  curve: DsMotion.enter,
+                  child: Icon(
+                    Icons.check,
+                    size: size * 0.7,
+                    color: dae.onAccent,
+                  ),
+                ),
+              ),
+            ],
           ),
-          child: done
-              ? Icon(Icons.check, size: size * 0.7, color: dae.onAccent)
-              : null,
         ),
       ),
     );
@@ -147,29 +183,37 @@ class DsPriorityPicker extends StatelessWidget {
         for (final p in TodoPriority.values)
           Padding(
             padding: EdgeInsets.only(right: Ds.s2),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onChanged(p),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: p == value ? dae.onSurface : Colors.transparent,
-                  borderRadius: BorderRadius.circular(Ds.radiusSm),
-                  border: Border.all(
-                    color: p == value
-                        ? dae.onSurface
-                        : dae.hairline.withValues(alpha: 0.4),
+            child: DsPressable(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(p),
+                child: AnimatedContainer(
+                  duration: DsMotion.standard,
+                  curve: DsMotion.onScreen,
+                  decoration: BoxDecoration(
+                    color: p == value ? dae.onSurface : Colors.transparent,
+                    borderRadius: BorderRadius.circular(Ds.radiusSm),
+                    border: Border.all(
+                      color: p == value
+                          ? dae.onSurface
+                          : dae.hairline.withValues(alpha: 0.4),
+                    ),
                   ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Ds.s3,
-                    vertical: Ds.s2,
-                  ),
-                  child: Text(
-                    (_labels[p] ?? p.wire).toUpperCase(),
-                    style: DsType.eyebrow(
-                      color: p == value ? dae.onAccent : dae.onSurfaceSecondary,
-                      weight: FontWeight.w600,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Ds.s3,
+                      vertical: Ds.s2,
+                    ),
+                    child: AnimatedDefaultTextStyle(
+                      duration: DsMotion.standard,
+                      curve: DsMotion.onScreen,
+                      style: DsType.eyebrow(
+                        color: p == value
+                            ? dae.onAccent
+                            : dae.onSurfaceSecondary,
+                        weight: FontWeight.w600,
+                      ),
+                      child: Text((_labels[p] ?? p.wire).toUpperCase()),
                     ),
                   ),
                 ),

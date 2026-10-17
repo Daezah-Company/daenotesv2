@@ -48,12 +48,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         name: DaeRouteNames.login,
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => _daePage(state, const LoginScreen()),
       ),
       GoRoute(
         path: '/register',
         name: DaeRouteNames.register,
-        builder: (context, state) => const RegisterScreen(),
+        pageBuilder: (context, state) =>
+            _daePage(state, const RegisterScreen()),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
@@ -99,14 +100,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/note/:uuid',
         name: DaeRouteNames.noteDetail,
-        builder: (context, state) =>
-            NoteDetailScreen(uuid: state.pathParameters['uuid']!),
+        pageBuilder: (context, state) => _daePage(
+          state,
+          NoteDetailScreen(uuid: state.pathParameters['uuid']!),
+        ),
       ),
       GoRoute(
         path: '/todo/:uuid',
         name: DaeRouteNames.todoDetail,
-        builder: (context, state) =>
-            TodoDetailScreen(uuid: state.pathParameters['uuid']!),
+        pageBuilder: (context, state) => _daePage(
+          state,
+          TodoDetailScreen(uuid: state.pathParameters['uuid']!),
+        ),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
@@ -114,3 +119,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+
+/// DaeNotes' route transition: the new page drifts in from the left while the
+/// page underneath settles back and dims. Kept short so navigation still feels
+/// immediate, and the shell's tab branches deliberately stay an `IndexedStack`
+/// — branch switches must not throw away scroll or graph state.
+CustomTransitionPage<void> _daePage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: DsMotion.page,
+    reverseTransitionDuration: DsMotion.pageExit,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+        DsRouteTransition(
+          animation: animation,
+          secondaryAnimation: secondaryAnimation,
+          child: child,
+        ),
+  );
+}

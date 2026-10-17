@@ -373,18 +373,26 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      final line = find.descendant(
-        of: find.descendant(
-          of: find.byType(AuthMasthead),
-          matching: find.byType(ThreadRail),
-        ),
-        matching: find.byType(ColoredBox),
+      final rail = find.descendant(
+        of: find.byType(AuthMasthead),
+        matching: find.byType(ThreadRail),
       );
-      expect(tester.getSize(line).height, lessThan(AuthMasthead.markHeight));
+      // The draw is a growing clip, so the thread keeps its full layout height
+      // and only the painted part advances down the spine.
+      Size drawn() {
+        final clip = find.descendant(of: rail, matching: find.byType(ClipRect));
+        final clipper = tester.widget<ClipRect>(clip).clipper!;
+        return clipper
+            .getClip(const Size(Ds.railWidth, AuthMasthead.markHeight))
+            .size;
+      }
+
+      expect(drawn().height, greaterThan(0));
+      expect(drawn().height, lessThan(AuthMasthead.markHeight));
       expect(tester.hasRunningAnimations, isTrue);
 
       await tester.pumpAndSettle();
-      expect(tester.getSize(line).height, AuthMasthead.markHeight);
+      expect(drawn().height, AuthMasthead.markHeight);
     });
 
     testWidgets('reduce-motion: rail langsung penuh, tanpa animasi', (

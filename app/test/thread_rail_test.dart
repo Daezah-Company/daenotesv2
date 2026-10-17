@@ -81,5 +81,53 @@ void main() {
 
       expect(find.byType(ThreadRail), findsOneWidget);
     });
+
+    testWidgets('draw-on inside a card measures by clip, not by height', (
+      tester,
+    ) async {
+      // `DsCard` sizes its row with IntrinsicHeight, which asks the rail for
+      // its intrinsic height. A rail that grows by laying out a shorter box
+      // throws there; growing by clipping does not.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: DsTheme.dark(),
+          home: Scaffold(
+            body: ListView(
+              children: [
+                DsCard(
+                  thread: Ds.threadAmber,
+                  drawOn: true,
+                  child: const SizedBox(height: 60),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final clip = find.descendant(
+        of: find.byType(ThreadRail),
+        matching: find.byType(ClipRect),
+      );
+      expect(clip, findsOneWidget);
+      final railHeight = tester.getSize(find.byType(ThreadRail)).height;
+      double drawnHeight() => tester
+          .widget<ClipRect>(clip)
+          .clipper!
+          .getClip(Size(Ds.railWidth, railHeight))
+          .height;
+
+      // The rail already occupies the card's full height; only the painted
+      // slice has grown.
+      expect(railHeight, greaterThan(60));
+      expect(drawnHeight(), greaterThan(0));
+      expect(drawnHeight(), lessThan(railHeight));
+
+      await tester.pumpAndSettle();
+      expect(drawnHeight(), railHeight);
+      expect(tester.getSize(find.byType(ThreadRail)).height, railHeight);
+    });
   });
 }

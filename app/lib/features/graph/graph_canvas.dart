@@ -35,8 +35,8 @@ class GraphCanvas extends ConsumerStatefulWidget {
 @visibleForTesting
 class GraphCanvasState extends ConsumerState<GraphCanvas>
     with TickerProviderStateMixin {
-  static const Duration _revealDuration = Duration(milliseconds: 1100);
-  static const Duration _focusDuration = Duration(milliseconds: 260);
+  static const Duration _revealDuration = DsMotion.canvasReveal;
+  static const Duration _focusDuration = DsMotion.focusPan;
 
   final GraphViewController view = GraphViewController();
 
@@ -346,7 +346,7 @@ class GraphCanvasState extends ConsumerState<GraphCanvas>
     _focusToScale = targetScale;
     _focusCtrl = AnimationController(vsync: this, duration: _focusDuration)
       ..addListener(() {
-        final t = Curves.easeOutCubic.transform(_focusCtrl!.value);
+        final t = DsMotion.enter.transform(_focusCtrl!.value);
         view.applyTransform(
           translation:
               Offset.lerp(_focusFromTranslation, _focusToTranslation, t) ??
@@ -425,7 +425,11 @@ class GraphCanvasState extends ConsumerState<GraphCanvas>
         if (selectedNode != null)
           Align(
             alignment: Alignment.bottomCenter,
-            child: _SelectionPanel(state: this, selected: selectedNode),
+            child: DsEnter(
+              travel: 18,
+              duration: DsMotion.panel,
+              child: _SelectionPanel(state: this, selected: selectedNode),
+            ),
           )
         else if (isolatedCount > 0)
           Positioned(
@@ -612,31 +616,38 @@ class _SelectionPanel extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      for (final uuid in shown)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: Ds.s2),
-                          child: DsCard(
-                            thread: Ds.threadColor(
-                              selected.type,
-                              s.data.byUuid[uuid]!.type,
-                            ),
-                            onTap: () => state.select(uuid),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: Ds.s3,
-                              vertical: Ds.s2,
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: DsText.body(
-                                    s.data.byUuid[uuid]!.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                      for (var i = 0; i < shown.length; i++)
+                        DsEnter(
+                          key: ValueKey(shown[i]),
+                          index: i,
+                          travel: 8,
+                          duration: DsMotion.panel,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: Ds.s2),
+                            child: DsCard(
+                              thread: Ds.threadColor(
+                                selected.type,
+                                s.data.byUuid[shown[i]]!.type,
+                              ),
+                              drawOn: true,
+                              onTap: () => state.select(shown[i]),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: Ds.s3,
+                                vertical: Ds.s2,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: DsText.body(
+                                      s.data.byUuid[shown[i]]!.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: Ds.s2),
-                                DsTypeMark(s.data.byUuid[uuid]!.type),
-                              ],
+                                  const SizedBox(width: Ds.s2),
+                                  DsTypeMark(s.data.byUuid[shown[i]]!.type),
+                                ],
+                              ),
                             ),
                           ),
                         ),

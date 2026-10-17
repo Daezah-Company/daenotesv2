@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'ds_motion.dart';
 import 'ds_theme.dart';
 import 'ds_tokens.dart';
 
@@ -9,7 +10,7 @@ import 'ds_tokens.dart';
 /// the visual incentive to link things.
 ///
 /// When [drawOn] is true the rail animates in with the signature
-/// "thread draw" (extends from the top over [Ds.motionThreadDraw]).
+/// "thread draw" (extends from the top over [DsMotion.railDraw]).
 /// Honours reduce-motion: instant, no draw-on.
 ///
 /// Use inside a `Row(crossAxisAlignment: CrossAxisAlignment.stretch)` or
@@ -55,23 +56,33 @@ class _ThreadLine extends StatelessWidget {
     if (!drawOn) return ColoredBox(color: color);
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: Ds.motionThreadDraw,
-      curve: Curves.easeOutCubic,
-      builder: (context, t, child) => LayoutBuilder(
-        builder: (context, constraints) {
-          if (!constraints.hasBoundedHeight) {
-            // No room to draw progressively — show the full thread.
-            return ColoredBox(color: color);
-          }
-          return Align(
-            alignment: Alignment.topCenter,
-            child: SizedBox(
-              height: constraints.maxHeight * t,
-              child: ColoredBox(color: color),
-            ),
-          );
-        },
+      duration: DsMotion.railDraw,
+      curve: DsMotion.enter,
+      // Clipped, not resized: the thread occupies its full height in layout
+      // from the first frame and only the paint grows down the spine. Measuring
+      // the height instead (LayoutBuilder) breaks any ancestor that asks for
+      // intrinsic dimensions — which is how `DsCard` gives the rail its height.
+      builder: (context, t, child) => ClipRect(
+        clipper: _DrawDownClipper(t),
+        clipBehavior: Clip.hardEdge,
+        child: child,
       ),
+      child: ColoredBox(color: color),
     );
   }
+}
+
+class _DrawDownClipper extends CustomClipper<Rect> {
+  const _DrawDownClipper(this.progress);
+
+  /// 0 = nothing drawn, 1 = the whole spine.
+  final double progress;
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTWH(0, 0, size.width, size.height * progress);
+
+  @override
+  bool shouldReclip(_DrawDownClipper oldClipper) =>
+      oldClipper.progress != progress;
 }

@@ -142,8 +142,12 @@ class GraphCanvasPainter extends CustomPainter {
       if (!span.overlaps(viewport)) continue; // edge culling
 
       final delay = revealActive ? (i / last) * _maxStagger : 0.0;
+      // Eased per edge: the thread shoots out then lands on the node, rather
+      // than marching at a constant speed.
       final progress = revealActive
-          ? ((t - delay) / _drawWindow).clamp(0.0, 1.0)
+          ? DsMotion.enter.transform(
+              ((t - delay) / _drawWindow).clamp(0.0, 1.0),
+            )
           : 1.0;
       if (progress <= 0) continue;
 

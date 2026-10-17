@@ -98,12 +98,17 @@ class _GroupedList extends ConsumerWidget {
         );
       }
       items.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Ds.s4,
-            vertical: Ds.s1,
+        DsEnter(
+          index: items.length,
+          travel: 10,
+          duration: DsMotion.panel,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Ds.s4,
+              vertical: Ds.s1,
+            ),
+            child: _ReminderRow(row: row),
           ),
-          child: _ReminderRow(row: row),
         ),
       );
     }
@@ -150,7 +155,7 @@ class _ReminderRow extends ConsumerWidget {
                     ],
                     Row(
                       children: [
-                        DsText.timestamp(overdue ? 'terlewat' : 'dentang'),
+                        DsText.timestamp(overdue ? 'terlewat' : 'terjadwal'),
                         const SizedBox(width: Ds.s2),
                         DsText.timestamp(DsTime.clock(r.scheduledAt)),
                         const SizedBox(width: Ds.s2),
@@ -299,11 +304,7 @@ class _EmptyInvitation extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ThreadRail(
-              thread: Ds.threadRose,
-              width: 4,
-              drawOn: !context.reduceMotion,
-            ),
+            const ThreadRail(thread: Ds.threadRose, width: 4, drawOn: true),
             const SizedBox(height: Ds.s4),
             DsText.section('Jadwalkan yang pertama'),
             const SizedBox(height: Ds.s2),

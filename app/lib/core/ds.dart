@@ -7,6 +7,8 @@ export 'dae_types.dart';
 export 'ds_button.dart';
 export 'ds_card.dart';
 export 'ds_eyebrow.dart';
+export 'ds_motion.dart';
+export 'ds_sheet.dart';
 export 'ds_tab_bar.dart';
 export 'ds_text.dart';
 export 'ds_theme.dart';

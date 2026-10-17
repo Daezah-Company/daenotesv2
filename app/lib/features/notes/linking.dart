@@ -10,13 +10,8 @@ import 'widgets/dae_widgets.dart';
 
 /// Opens the offline link picker for [from].
 Future<void> showDaeLinkPicker(BuildContext context, DaeItemRef from) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: context.dae.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Ds.radiusLg)),
-    ),
+  return showDsSheet<void>(
+    context,
     builder: (sheetContext) => Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
@@ -68,14 +63,19 @@ class LinkedItemsSection extends ConsumerWidget {
             ),
           )
         else
-          for (final link in links)
-            _NeighborRow(
-              link: link,
-              from: self,
-              neighbor: index[daeOtherEndpoint(type, uuid, link).uuid],
-              onUnlink: () =>
-                  ref.read(linksRepositoryProvider).unlink(link.uuid),
-              hairline: dae.hairline,
+          for (var i = 0; i < links.length; i++)
+            DsEnter(
+              index: i,
+              travel: 8,
+              duration: DsMotion.panel,
+              child: _NeighborRow(
+                link: links[i],
+                from: self,
+                neighbor: index[daeOtherEndpoint(type, uuid, links[i]).uuid],
+                onUnlink: () =>
+                    ref.read(linksRepositoryProvider).unlink(links[i].uuid),
+                hairline: dae.hairline,
+              ),
             ),
       ],
     );
@@ -230,11 +230,20 @@ class _LinkPickerSheetState extends ConsumerState<LinkPickerSheet> {
                   prefixIcon: Icon(Icons.search, size: 18),
                 ),
               ),
-              if (_flash != null) ...[
-                const SizedBox(height: Ds.s2),
-                DsText.caption(_flash!),
-              ],
-              const SizedBox(height: Ds.s3),
+              // The confirmation opens the layout instead of snapping it, so
+              // the list below slides rather than jumps.
+              AnimatedSize(
+                duration: DsMotion.panel,
+                curve: DsMotion.enter,
+                alignment: Alignment.topCenter,
+                child: _flash == null
+                    ? const SizedBox(width: double.infinity)
+                    : Padding(
+                        padding: const EdgeInsets.only(bottom: Ds.s3),
+                        child: DsText.caption(_flash!),
+                      ),
+              ),
+              if (_flash == null) const SizedBox(height: Ds.s3),
               Expanded(
                 child: candidates.isEmpty
                     ? DsInvitation(

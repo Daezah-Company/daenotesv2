@@ -116,11 +116,16 @@ class _DaeInboxScreenState extends ConsumerState<DaeInboxScreen> {
         child: DsEyebrow('$label · ${items.length}'),
       ),
       const SizedBox(height: Ds.s2),
-      for (final item in items)
-        Padding(
-          key: ValueKey('row-${item.uuid}'),
-          padding: const EdgeInsets.only(bottom: Ds.s2),
-          child: _SpineRow(item: item),
+      for (var i = 0; i < items.length; i++)
+        DsEnter(
+          index: i,
+          travel: 10,
+          duration: DsMotion.panel,
+          child: Padding(
+            key: ValueKey('row-${items[i].uuid}'),
+            padding: const EdgeInsets.only(bottom: Ds.s2),
+            child: _SpineRow(item: items[i]),
+          ),
         ),
     ];
   }
@@ -310,6 +315,9 @@ class _SpineRow extends ConsumerWidget {
 
     return DsCard(
       thread: thread,
+      // The rail draws itself down the spine the moment a link lands, so the
+      // colour is earned on screen rather than just appearing.
+      drawOn: true,
       onTap: () => context.push(
         item.type == DaeItemType.note
             ? DaeRouteNames.notePath(item.uuid)

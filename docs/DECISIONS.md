@@ -180,3 +180,38 @@ jadi seluruh konsep `serverId` lokal sudah dibuang. Isi sekarang:
   `flutter build bundle` debug + release exit 0. **Pengecekan visual belum dilakukan** —
   mesin ini tidak punya JDK (APK tidak bisa dibangun) dan `libsecret-1-dev` belum ada
   (build linux gagal), jadi rasa gerak masih perlu dinilai user setelah toolchain lengkap.
+
+# Keputusan visual — chrome ditarik kembali ke hex kontrak §6
+
+- Chrome dulu meleset jadi charcoal kehijauan (`ink #1D2823`, `inkDeep #111815`,
+  `paper #F5F7F2`, `paperVeil #77817A`) padahal CONTRACT §6 menulis graphite/paper.
+  Sekarang kelima token persis kontrak: `#282828 / #1C1C1B / #353533 / #FFFFFF / #8B8B84`.
+  Dikunci oleh `app/test/theme/chrome_palette_test.dart`, termasuk assertion "tidak ada
+  channel green yang dominan" supaya drift ini tidak terulang.
+- **Keempat warna benang dipertahankan** (amber/moss/slate/rose). Ini keputusan user
+  saat redesign: chrome netral total, warna tetap = relasi. Type mark dan status ikut
+  tidak berubah.
+- Deviasi dari kontrak (satu ini perlu dibaca desainer berikutnya): `paperVeil #8B8B84`
+  tidak bisa jadi warna teks di kedua mode — 3,4:1 di atas `#FFFFFF` dan 4,47:1 di atas
+  `#282828`, keduanya di bawah AA untuk caption 12px. Peran dipecah: `Ds.veilOnInk
+  #9A9A93` (5,2:1) dan `Ds.veilOnPaper #6E6E68` (4,7:1) untuk `onSurfaceSecondary`,
+  `paperVeil` tetap khusus hairline.
+- Hairline mode terang memakai `ink`, bukan `paperVeil`: semua konsumennya mengalikan
+  alpha 0,12–0,4, jadi abu di atas putih murni praktis hilang.
+- `Ds.paperLift` **dihapus**. Setelah `paper` = `#FFFFFF` tidak ada putih kedua yang bisa
+  dipakai; mode terang memisahkan kartu dengan hairline graphite, bukan dengan lift.
+  Mode gelap tetap punya `inkLift` sebagai permukaan terangkat.
+- Mark (`DaeMark`) ikut jadi duotone: tile `ink`, halaman `paper`, fold `paperVeil`,
+  goresan `ink`; dua titik ujung benang tetap amber + moss — satu-satunya aksen di mark.
+- Aset Android ikut ditarik (kalau tidak, ikon launcher tetap hijau sementara app sudah
+  graphite): `dae_ink` → `#1C1C1B` (latar splash), `dae_icon_background` → `#282828`,
+  `daenotes_mark.xml` + `daenotes_icon_foreground.xml` di-retint, dan tile splash kini
+  rounded (radius 32/108) supaya tidak lagi kotak penuh.
+- Kelima PNG `ic_launcher` (jalur legacy pra-API26) digambar ulang dari **geometri XML
+  yang sama** lewat `app/android/tool/gen_launcher_icons.py` (Pillow, supersample 4x),
+  bukan hasil render AI — jadi ikon, splash, dan mark in-app tidak bisa beda.
+  Regenerasi: `python3 app/android/tool/gen_launcher_icons.py app/android/app/src/main/res`.
+- Motion tidak disentuh: `DsMotion` tetap satu kosakata. Yang berubah hanya permukaan
+  tempat ia bergerak (underline `onSurface` #FFFFFF di atas #1C1C1B, rail amber di atas
+  #1C1C1B), jadi kontras gerak naik tanpa menambah durasi baru.
+

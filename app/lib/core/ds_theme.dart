@@ -32,10 +32,12 @@ class DaeTokens extends ThemeExtension<DaeTokens> {
   /// Primary text: paper in dark, ink in light.
   final Color onSurface;
 
-  /// Secondary text: paperVeil in both modes.
+  /// Secondary text: the veil tuned for whichever surface it sits on, because
+  /// one grey cannot clear AA on both #282828 and #FFFFFF.
   final Color onSurfaceSecondary;
 
-  /// Hairline borders/dividers.
+  /// Hairline tint. Every consumer multiplies it by an alpha of 0.12–0.4, so
+  /// light mode must tint with `ink` (a grey hairline on white disappears).
   final Color hairline;
 
   /// Text drawn on top of a coloured thread/status accent.
@@ -47,7 +49,7 @@ class DaeTokens extends ThemeExtension<DaeTokens> {
     surface: Ds.ink,
     elevated: Ds.inkLift,
     onSurface: Ds.paper,
-    onSurfaceSecondary: Ds.paperVeil,
+    onSurfaceSecondary: Ds.veilOnInk,
     hairline: Ds.paperVeil,
     onAccent: Ds.ink,
   );
@@ -58,8 +60,8 @@ class DaeTokens extends ThemeExtension<DaeTokens> {
     surface: Ds.paper,
     elevated: Ds.paper,
     onSurface: Ds.ink,
-    onSurfaceSecondary: Ds.paperVeil,
-    hairline: Ds.paperVeil,
+    onSurfaceSecondary: Ds.veilOnPaper,
+    hairline: Ds.ink,
     onAccent: Ds.paper,
   );
 

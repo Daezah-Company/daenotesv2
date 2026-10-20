@@ -4,7 +4,9 @@ import 'dae_types.dart';
 
 /// Design tokens for DaeNotes — the single source of visual truth.
 /// Concept (contract section 5): the chrome is strictly bichrome
-/// ink/paper; colour is reserved for connection threads, type marks and status.
+/// graphite/paper; colour is reserved for connection threads, type marks and
+/// status. Hexes here are contract section 6 verbatim — see
+/// `test/theme/chrome_palette_test.dart`.
 abstract final class Ds {
   // ---------------------------------------------------------------- chrome
   /// Dark surface, text colour above `paper`.
@@ -16,11 +18,19 @@ abstract final class Ds {
   /// Elevated card / panel surface.
   static const Color inkLift = Color(0xFF353533);
 
-  /// Light surface, text colour above `ink`.
+  /// Light surface, text colour above `ink`. Paper is the one light surface;
+  /// cards on it are separated by `ink` hairlines, not by a second white.
   static const Color paper = Color(0xFFFFFFFF);
 
   /// Secondary text / hairlines.
   static const Color paperVeil = Color(0xFF8B8B84);
+
+  /// Secondary text on a dark surface. `paperVeil` alone is 4.47:1 on `ink`,
+  /// just under AA, so the text role gets its own lift.
+  static const Color veilOnInk = Color(0xFF9A9A93);
+
+  /// Secondary text on `paper`. `paperVeil` on white is only 3.4:1.
+  static const Color veilOnPaper = Color(0xFF6E6E68);
 
   // --------------------------------------------------------------- threads
   /// note -> note.
@@ -54,9 +64,9 @@ abstract final class Ds {
   static const double s8 = 48;
 
   // ---------------------------------------------------------------- radii
-  static const double radiusSm = 4;
-  static const double radius = 10;
-  static const double radiusLg = 16;
+  static const double radiusSm = 10;
+  static const double radius = 16;
+  static const double radiusLg = 24;
 
   /// Signature 3px list-spine rail width.
   static const double railWidth = 3;

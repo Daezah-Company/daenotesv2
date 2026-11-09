@@ -19,6 +19,7 @@ class Note extends Model
         'user_id',
         'uuid',
         'title',
+        'group_name',
         'body',
         'color',
         'pinned',

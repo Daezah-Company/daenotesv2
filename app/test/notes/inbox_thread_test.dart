@@ -80,9 +80,9 @@ void main() {
       await tester.pumpWidget(local.wrap(const DaeInboxScreen()));
       await tester.pumpAndSettle();
 
-      // note <-> note => amber on both connected rows.
-      expect(await railColor(tester, a), Ds.threadAmber);
-      expect(await railColor(tester, b), Ds.threadAmber);
+      // Thread connections use the app's monochrome surface color.
+      expect(await railColor(tester, a), Ds.paper);
+      expect(await railColor(tester, b), Ds.paper);
 
       // The isolated item keeps the empty gutter — no colour.
       expect(await railColor(tester, isolated), const Color(0x00000000));
@@ -103,8 +103,8 @@ void main() {
     await tester.pumpWidget(local.wrap(const DaeInboxScreen()));
     await tester.pumpAndSettle();
 
-    expect(await railColor(tester, note), Ds.threadMoss);
-    expect(await railColor(tester, todo), Ds.threadMoss);
+    expect(await railColor(tester, note), Ds.paper);
+    expect(await railColor(tester, todo), Ds.paper);
     await drain(tester);
   });
 }

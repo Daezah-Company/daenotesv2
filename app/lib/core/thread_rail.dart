@@ -35,7 +35,8 @@ class ThreadRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = thread;
+    // Relations are shown by the rail's presence, not by a hue.
+    final color = thread == null ? null : context.dae.onSurface;
     return SizedBox(
       width: width,
       child: color == null

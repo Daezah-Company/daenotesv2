@@ -19,6 +19,7 @@ class Todo extends Model
         'user_id',
         'uuid',
         'title',
+        'group_name',
         'notes',
         'done',
         'done_at',

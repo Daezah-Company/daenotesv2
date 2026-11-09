@@ -26,16 +26,18 @@ class ServerApplier {
     for (final row in pull.reminders) {
       await applyReminder(row);
     }
-    pull.deleted.forEach((table, uuids) {
+    for (final entry in pull.deleted.entries) {
+      final table = entry.key;
+      final uuids = entry.value;
       for (final uuid in uuids) {
-        _tombstone(table, uuid);
+        await _tombstone(table, uuid);
       }
-    });
+    }
   });
 
   // ------------------------------------------------------------------ note
 
-  Future<void> applyNote(Map<String, dynamic> row) async {
+  Future<void> applyNote(Map<String, dynamic> row, {bool force = false}) async {
     final uuid = row['uuid'] as String?;
     if (uuid == null) return;
     final updated =
@@ -43,12 +45,25 @@ class ServerApplier {
     final local = await (_db.select(
       _db.notes,
     )..where((t) => t.uuid.equals(uuid))).getSingleOrNull();
-    if (local != null && local.updatedAt.toUtc().isAfter(updated)) return;
+    if (!force && local != null && local.updatedAt.toUtc().isAfter(updated)) {
+      if (row.containsKey('access_level')) {
+        await (_db.update(_db.notes)..where((t) => t.uuid.equals(uuid))).write(
+          NotesCompanion(
+            ownerUserId: Value((row['owner_user_id'] as num?)?.toInt()),
+            canEdit: Value(row['access_level'] != 'viewer'),
+          ),
+        );
+      }
+      return;
+    }
     final companion = NotesCompanion.insert(
       uuid: uuid,
+      ownerUserId: Value((row['owner_user_id'] as num?)?.toInt()),
+      canEdit: Value(row['access_level'] != 'viewer'),
       title: Value('${row['title'] ?? ''}'),
       body: Value('${row['body'] ?? ''}'),
       color: Value(row['color'] as String?),
+      groupName: Value(row['group_name'] as String?),
       pinned: Value(row['pinned'] == true),
       archivedAt: Value(parseServerDate(row['archived_at'])),
       deletedAt: Value(parseServerDate(row['deleted_at'])),
@@ -68,7 +83,7 @@ class ServerApplier {
 
   // ------------------------------------------------------------------ todo
 
-  Future<void> applyTodo(Map<String, dynamic> row) async {
+  Future<void> applyTodo(Map<String, dynamic> row, {bool force = false}) async {
     final uuid = row['uuid'] as String?;
     if (uuid == null) return;
     final updated =
@@ -76,11 +91,24 @@ class ServerApplier {
     final local = await (_db.select(
       _db.todos,
     )..where((t) => t.uuid.equals(uuid))).getSingleOrNull();
-    if (local != null && local.updatedAt.toUtc().isAfter(updated)) return;
+    if (!force && local != null && local.updatedAt.toUtc().isAfter(updated)) {
+      if (row.containsKey('access_level')) {
+        await (_db.update(_db.todos)..where((t) => t.uuid.equals(uuid))).write(
+          TodosCompanion(
+            ownerUserId: Value((row['owner_user_id'] as num?)?.toInt()),
+            canEdit: Value(row['access_level'] != 'viewer'),
+          ),
+        );
+      }
+      return;
+    }
     final companion = TodosCompanion.insert(
       uuid: uuid,
+      ownerUserId: Value((row['owner_user_id'] as num?)?.toInt()),
+      canEdit: Value(row['access_level'] != 'viewer'),
       title: Value('${row['title'] ?? ''}'),
       notes: Value(row['notes'] as String?),
+      groupName: Value(row['group_name'] as String?),
       done: Value(row['done'] == true),
       doneAt: Value(parseServerDate(row['done_at'])),
       priority: Value(TodoPriority.fromWire(row['priority'] as String?)),
@@ -198,6 +226,20 @@ class ServerApplier {
     }
   }
 
+  /// A rejected collaborator delete/resurrection is replaced with the
+  /// canonical owner row, even when the local tombstone is newer.
+  Future<void> applyReadOnly(
+    String table,
+    Map<String, dynamic> serverRow,
+  ) async {
+    switch (table) {
+      case 'notes':
+        await applyNote(serverRow, force: true);
+      case 'todos':
+        await applyTodo(serverRow, force: true);
+    }
+  }
+
   /// Marks a row as delivered to the server. The only marker is `synced_at`:
   /// identity is the client uuid, so there is no server id to backfill and
   /// nothing else to record. Links and reminders have no `synced_at` column
@@ -239,5 +281,13 @@ class ServerApplier {
               ..where((t) => t.uuid.equals(uuid) & t.deletedAt.isNull()))
             .write(RemindersCompanion(deletedAt: Value(now)));
     }
+    await (_db.delete(
+      _db.pendingChanges,
+    )..where((t) => t.changeTable.equals(table) & t.uuid.equals(uuid))).go();
   }
+
+  /// Drop a locally queued edit after the user has lost shared access. Without
+  /// this cleanup the stale upsert could be mistaken for a brand-new item.
+  Future<void> revokeShared(String table, String uuid) =>
+      _tombstone(table, uuid);
 }

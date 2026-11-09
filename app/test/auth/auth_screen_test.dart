@@ -147,6 +147,21 @@ void main() {
       expect(find.text('Isi nama Anda.'), findsOneWidget);
       expect(find.text('Kata sandi minimal 8 karakter.'), findsOneWidget);
     });
+
+    testWidgets('kesalahan per field hilang saat field itu diperbaiki', (
+      tester,
+    ) async {
+      await open(tester, const RegisterScreen());
+      await tester.tap(find.text('DAFTAR'));
+      await tester.pump();
+
+      await enter(tester, AuthFieldKind.email, 'rina@surel.com');
+      await tester.pump();
+
+      expect(find.text('Isi email Anda.'), findsNothing);
+      expect(find.text('Isi nama Anda.'), findsOneWidget);
+      expect(find.text('Isi kata sandi.'), findsOneWidget);
+    });
   });
 
   group('kirim', () {
@@ -194,6 +209,7 @@ void main() {
 
       final busy = find.text('MEMPROSES');
       expect(busy, findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
       final button = tester.widget<DsButton>(
         find.ancestor(of: busy, matching: find.byType(DsButton)).first,
       );

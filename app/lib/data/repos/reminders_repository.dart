@@ -6,7 +6,7 @@ import '../model/uuid.dart';
 import 'outbox.dart';
 
 /// Reminders are scheduled locally from `remind_at` (contract §6) and synced
-/// as data rows. `threadRose` marks their status colour.
+/// as data rows. A monochrome rail marks their status.
 class RemindersRepository {
   RemindersRepository(this._db, this._outbox);
 

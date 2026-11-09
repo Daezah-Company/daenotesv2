@@ -1,0 +1,35 @@
+<resources>
+    <string name="daenotes_widget_description">Buat catatan atau tugas langsung dari layar utama</string>
+    <string name="daenotes_overview_widget_description">Lihat catatan terbaru dan tugas terdekat, lalu ceklis tugas dari layar utama</string>
+    <string name="daenotes_overview_title">TERDEKAT</string>
+    <string name="daenotes_overview_hint">BUKA • CEKLIS</string>
+    <string name="daenotes_overview_note_label">CATATAN TERBARU</string>
+    <string name="daenotes_overview_todo_label">TUGAS BERIKUTNYA</string>
+    <string name="daenotes_overview_empty_note">Belum ada catatan</string>
+    <string name="daenotes_overview_empty_todo">Tidak ada tugas aktif</string>
+    <string name="daenotes_overview_sign_in">Masuk ke DaeNotes untuk melihat item</string>
+    <string name="daenotes_overview_open_note">Buka catatan</string>
+    <string name="daenotes_overview_open_todo">Buka tugas</string>
+    <string name="daenotes_overview_check_todo">Tandai tugas selesai</string>
+    <string name="daenotes_overview_no_due">Tanpa tenggat</string>
+    <string name="daenotes_overview_today">Hari ini</string>
+    <string name="daenotes_overview_overdue">Terlambat</string>
+    <string name="daenotes_widget_brand">DAENOTES</string>
+    <string name="daenotes_widget_kicker">TANGKAP CEPAT</string>
+    <string name="daenotes_widget_note">CATATAN</string>
+    <string name="daenotes_widget_todo">TUGAS</string>
+    <string name="daenotes_widget_note_accessibility">Buat catatan baru</string>
+    <string name="daenotes_widget_todo_accessibility">Buat tugas baru</string>
+    <string name="capture_kicker">TANGKAP CEPAT</string>
+    <string name="capture_new_note">Catatan baru</string>
+    <string name="capture_new_todo">Tugas baru</string>
+    <string name="capture_note_title">JUDUL CATATAN</string>
+    <string name="capture_todo_title">JUDUL TUGAS</string>
+    <string name="capture_note_hint">Tulis judul</string>
+    <string name="capture_todo_hint">Tulis nama tugas</string>
+    <string name="capture_save_note">SIMPAN CATATAN</string>
+    <string name="capture_save_todo">SIMPAN TUGAS</string>
+    <string name="capture_note_saved">Catatan disimpan</string>
+    <string name="capture_todo_saved">Tugas disimpan</string>
+    <string name="capture_validation_title">Judul wajib diisi</string>
+</resources>

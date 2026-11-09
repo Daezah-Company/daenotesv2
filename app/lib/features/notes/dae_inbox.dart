@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../app_router.dart';
 import '../../core/ds.dart';
 import '../../data/providers.dart';
+import '../../data/preferences/app_preferences.dart';
 import '../todos/todo_editor.dart';
 import 'dae_item.dart';
 import 'dae_providers.dart';
 import 'note_editor.dart';
+import 'dae_item_actions.dart';
 import 'widgets/dae_widgets.dart';
 
 /// The app's spine: notes and todos together in one list, each row carrying a
@@ -16,7 +18,9 @@ import 'widgets/dae_widgets.dart';
 /// less. Reads only local drift streams, so it renders instantly with zero
 /// network.
 class DaeInboxScreen extends ConsumerStatefulWidget {
-  const DaeInboxScreen({super.key});
+  const DaeInboxScreen({super.key, this.capture});
+
+  final String? capture;
 
   @override
   ConsumerState<DaeInboxScreen> createState() => _DaeInboxScreenState();
@@ -26,6 +30,31 @@ class _DaeInboxScreenState extends ConsumerState<DaeInboxScreen> {
   static const _filters = ['Semua', 'Catatan', 'Tugas'];
   int _filter = 0;
   String _query = '';
+  bool _animateRows = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _openCapture(widget.capture);
+  }
+
+  @override
+  void didUpdateWidget(covariant DaeInboxScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.capture != widget.capture) _openCapture(widget.capture);
+  }
+
+  void _openCapture(String? capture) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || (capture != 'note' && capture != 'todo')) return;
+      context.go('/inbox');
+      if (capture == 'note') {
+        NoteEditorSheet.show(context);
+      } else {
+        TodoEditorSheet.show(context);
+      }
+    });
+  }
 
   bool _matches(DaeItem item) {
     if (_query.trim().isEmpty) return true;
@@ -54,8 +83,10 @@ class _DaeInboxScreenState extends ConsumerState<DaeInboxScreen> {
       for (final t in (todosAsync.value ?? const [])) DaeItem.fromTodo(t),
     ];
 
-    final showNotes = _filter != 1;
-    final showTodos = _filter != 2;
+    // Filter indices follow [_filters]: 1 = Catatan, 2 = Tugas.
+    // Keeping these predicates explicit prevents the two views being swapped.
+    final showNotes = _filter != 2;
+    final showTodos = _filter != 1;
     final noteRows = notes.where(_matches).toList();
     final todoRows = todos.where(_matches).toList();
     final nothingAtAll = notes.isEmpty && todos.isEmpty;
@@ -67,16 +98,27 @@ class _DaeInboxScreenState extends ConsumerState<DaeInboxScreen> {
           _InboxToolbar(
             filters: _filters,
             currentIndex: _filter,
-            onFilter: (i) => setState(() => _filter = i),
-            onQuery: (v) => setState(() => _query = v),
+            onArchive: () => context.push('/archive'),
+            onFilter: (i) => setState(() {
+              _filter = i;
+              _animateRows = false;
+            }),
+            onQuery: (v) => setState(() {
+              _query = v;
+              _animateRows = false;
+            }),
             noteCount: notes.length,
             todoCount: todos.length,
           ),
           _CaptureBar(onNote: _captureNote, onTodo: _captureTodo),
           Expanded(
             child: nothingAtAll
-                ? const SingleChildScrollView(child: _FirstRunInvitation())
+                ? const SingleChildScrollView(
+                    key: ValueKey('inbox-empty'),
+                    child: _FirstRunInvitation(),
+                  )
                 : ListView(
+                    key: ValueKey('inbox-filter-$_filter'),
                     padding: const EdgeInsets.fromLTRB(
                       Ds.s4,
                       Ds.s2,
@@ -84,10 +126,12 @@ class _DaeInboxScreenState extends ConsumerState<DaeInboxScreen> {
                       Ds.s8,
                     ),
                     children: [
-                      if (showNotes) ..._section('Catatan', noteRows),
+                      if (showNotes)
+                        ..._section('Catatan', noteRows, animate: _animateRows),
                       if (showNotes && showTodos && noteRows.isNotEmpty)
                         const SizedBox(height: Ds.s4),
-                      if (showTodos) ..._section('Tugas', todoRows),
+                      if (showTodos)
+                        ..._section('Tugas', todoRows, animate: _animateRows),
                       if (_query.isNotEmpty &&
                           noteRows.isEmpty &&
                           todoRows.isEmpty)
@@ -100,7 +144,11 @@ class _DaeInboxScreenState extends ConsumerState<DaeInboxScreen> {
     );
   }
 
-  List<Widget> _section(String label, List<DaeItem> items) {
+  List<Widget> _section(
+    String label,
+    List<DaeItem> items, {
+    required bool animate,
+  }) {
     if (items.isEmpty) {
       return [
         Padding(
@@ -110,35 +158,68 @@ class _DaeInboxScreenState extends ConsumerState<DaeInboxScreen> {
         _SectionEmpty(label: label),
       ];
     }
+    final byGroup = <String, List<DaeItem>>{};
+    for (final item in items) {
+      final group = item.groupName?.trim() ?? '';
+      byGroup.putIfAbsent(group, () => []).add(item);
+    }
+    final groups = byGroup.keys.toList()
+      ..sort((a, b) {
+        if (a.isEmpty) return 1;
+        if (b.isEmpty) return -1;
+        return a.toLowerCase().compareTo(b.toLowerCase());
+      });
+
     return [
       Padding(
         padding: const EdgeInsets.symmetric(vertical: Ds.s2),
         child: DsEyebrow('$label · ${items.length}'),
       ),
       const SizedBox(height: Ds.s2),
-      for (var i = 0; i < items.length; i++)
-        DsEnter(
-          index: i,
-          travel: 10,
-          duration: DsMotion.panel,
-          child: Padding(
-            key: ValueKey('row-${items[i].uuid}'),
-            padding: const EdgeInsets.only(bottom: Ds.s2),
-            child: _SpineRow(item: items[i]),
+      for (final group in groups) ...[
+        if (group.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: Ds.s2, bottom: Ds.s1),
+            child: DsEyebrow('$group · ${byGroup[group]!.length}'),
           ),
-        ),
+        for (var i = 0; i < byGroup[group]!.length; i++)
+          if (animate)
+            DsEnter(
+              index: i,
+              travel: 10,
+              duration: DsMotion.panel,
+              child: Padding(
+                key: ValueKey('row-${byGroup[group]![i].uuid}'),
+                padding: const EdgeInsets.only(bottom: Ds.s2),
+                child: _SpineRow(item: byGroup[group]![i]),
+              ),
+            )
+          else
+            Padding(
+              key: ValueKey('row-${byGroup[group]![i].uuid}'),
+              padding: const EdgeInsets.only(bottom: Ds.s2),
+              child: _SpineRow(item: byGroup[group]![i]),
+            ),
+      ],
     ];
   }
 
-  void _captureNote() => NoteEditorSheet.show(context);
+  Future<void> _captureNote() async {
+    await ref.read(appPreferencesProvider.notifier).tapFeedback();
+    if (mounted) await NoteEditorSheet.show(context);
+  }
 
-  void _captureTodo() => TodoEditorSheet.show(context);
+  Future<void> _captureTodo() async {
+    await ref.read(appPreferencesProvider.notifier).tapFeedback();
+    if (mounted) await TodoEditorSheet.show(context);
+  }
 }
 
 class _InboxToolbar extends StatefulWidget {
   const _InboxToolbar({
     required this.filters,
     required this.currentIndex,
+    required this.onArchive,
     required this.onFilter,
     required this.onQuery,
     required this.noteCount,
@@ -147,6 +228,7 @@ class _InboxToolbar extends StatefulWidget {
 
   final List<String> filters;
   final int currentIndex;
+  final VoidCallback onArchive;
   final ValueChanged<int> onFilter;
   final ValueChanged<String> onQuery;
   final int noteCount;
@@ -170,7 +252,7 @@ class _InboxToolbarState extends State<_InboxToolbar> {
   Widget build(BuildContext context) {
     final dae = context.dae;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Ds.s4, Ds.s3, Ds.s4, Ds.s2),
+      padding: const EdgeInsets.fromLTRB(Ds.s5, Ds.s5, Ds.s5, Ds.s3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -189,9 +271,29 @@ class _InboxToolbarState extends State<_InboxToolbar> {
             )
           else
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: DsText.displaySm('Beranda')),
-                DsText.caption('${widget.noteCount + widget.todoCount} item'),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DsText.displaySm('Ruang kerja'),
+                      const SizedBox(height: Ds.s1),
+                      DsText.caption(
+                        '${widget.noteCount} catatan · ${widget.todoCount} tugas',
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Arsip',
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(
+                    Icons.archive_outlined,
+                    color: dae.onSurfaceSecondary,
+                  ),
+                  onPressed: widget.onArchive,
+                ),
                 IconButton(
                   tooltip: 'Cari',
                   visualDensity: VisualDensity.compact,
@@ -200,6 +302,7 @@ class _InboxToolbarState extends State<_InboxToolbar> {
                 ),
               ],
             ),
+          const SizedBox(height: Ds.s4),
           DsFilterControl(
             options: widget.filters,
             currentIndex: widget.currentIndex,
@@ -224,39 +327,26 @@ class _CaptureBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dae = context.dae;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Ds.s4, Ds.s1, Ds.s4, Ds.s3),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: dae.hairline.withValues(alpha: 0.28)),
+      padding: const EdgeInsets.fromLTRB(Ds.s5, 0, Ds.s5, Ds.s4),
+      child: Row(
+        children: [
+          Expanded(
+            child: _CaptureButton(
+              label: 'Catatan baru',
+              icon: Icons.edit_note_rounded,
+              onTap: onNote,
+            ),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: Ds.s3),
-          child: Row(
-            children: [
-              Expanded(
-                child: _CaptureButton(
-                  label: 'Catatan',
-                  icon: Icons.edit_outlined,
-                  accent: DaeTypeMarks.noteColor,
-                  onTap: onNote,
-                ),
-              ),
-              const SizedBox(width: Ds.s2),
-              Expanded(
-                child: _CaptureButton(
-                  label: 'Tugas',
-                  icon: Icons.check_circle_outline,
-                  accent: DaeTypeMarks.todoColor,
-                  onTap: onTodo,
-                ),
-              ),
-            ],
+          const SizedBox(width: Ds.s3),
+          Expanded(
+            child: _CaptureButton(
+              label: 'Tugas baru',
+              icon: Icons.add_task_rounded,
+              onTap: onTodo,
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -266,35 +356,46 @@ class _CaptureButton extends StatelessWidget {
   const _CaptureButton({
     required this.label,
     required this.icon,
-    required this.accent,
     required this.onTap,
   });
 
   final String label;
   final IconData icon;
-  final Color accent;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final dae = context.dae;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(Ds.radiusSm),
-          border: Border.all(color: dae.hairline.withValues(alpha: 0.4)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: Ds.s3),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 15, color: accent),
-              const SizedBox(width: Ds.s2),
-              DsEyebrow('+ $label'),
-            ],
+    return DsPressable(
+      child: Material(
+        color: dae.elevated,
+        borderRadius: BorderRadius.circular(Ds.radius),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Ds.radius),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Ds.s3,
+              vertical: Ds.s3,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 19, color: dae.onSurface),
+                const SizedBox(width: Ds.s2),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DsType.body(
+                      color: dae.onSurface,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -318,22 +419,33 @@ class _SpineRow extends ConsumerWidget {
       // The rail draws itself down the spine the moment a link lands, so the
       // colour is earned on screen rather than just appearing.
       drawOn: true,
+      onLongPress: () =>
+          showDaeItemActions(context: context, ref: ref, item: item),
       onTap: () => context.push(
         item.type == DaeItemType.note
             ? DaeRouteNames.notePath(item.uuid)
             : DaeRouteNames.todoPath(item.uuid),
       ),
       child: item.type == DaeItemType.note
-          ? _NoteRowBody(item: item)
-          : _TodoRowBody(item: item),
+          ? _NoteRowBody(
+              item: item,
+              onActions: () =>
+                  showDaeItemActions(context: context, ref: ref, item: item),
+            )
+          : _TodoRowBody(
+              item: item,
+              onActions: () =>
+                  showDaeItemActions(context: context, ref: ref, item: item),
+            ),
     );
   }
 }
 
 class _NoteRowBody extends StatelessWidget {
-  const _NoteRowBody({required this.item});
+  const _NoteRowBody({required this.item, required this.onActions});
 
   final DaeItem item;
+  final VoidCallback onActions;
 
   @override
   Widget build(BuildContext context) {
@@ -379,15 +491,18 @@ class _NoteRowBody extends StatelessWidget {
         ),
         const SizedBox(width: Ds.s3),
         DsText.timestamp(DsTime.relative(item.updatedAt)),
+        const SizedBox(width: Ds.s1),
+        _ItemActionsButton(onPressed: onActions),
       ],
     );
   }
 }
 
 class _TodoRowBody extends ConsumerWidget {
-  const _TodoRowBody({required this.item});
+  const _TodoRowBody({required this.item, required this.onActions});
 
   final DaeItem item;
+  final VoidCallback onActions;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -416,9 +531,27 @@ class _TodoRowBody extends ConsumerWidget {
           DsText.timestamp(DsTime.dueLabel(item.dueAt!))
         else
           DsText.timestamp(DsTime.relative(item.updatedAt)),
+        const SizedBox(width: Ds.s1),
+        _ItemActionsButton(onPressed: onActions),
       ],
     );
   }
+}
+
+class _ItemActionsButton extends StatelessWidget {
+  const _ItemActionsButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    tooltip: 'Tindakan item',
+    visualDensity: VisualDensity.compact,
+    padding: EdgeInsets.zero,
+    constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+    icon: const Icon(Icons.more_horiz, size: 19),
+    onPressed: onPressed,
+  );
 }
 
 class _SectionEmpty extends StatelessWidget {

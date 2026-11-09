@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'ds_theme.dart';
+import 'dae_loader.dart';
 import 'ds_motion.dart';
 import 'ds_tokens.dart';
 import 'ds_typography.dart';
@@ -15,12 +16,11 @@ enum DsButtonVariant {
   /// No chrome until pressed.
   ghost,
 
-  /// Destructive — the one place `threadRose` may dress a control (status).
+  /// Destructive action, expressed with monochrome contrast.
   destructive,
 }
 
-/// Bichrome button. Label is mono uppercase (eyebrow voice). The only colour
-/// allowed is the rose on `destructive`, which reads as a status.
+/// Swiss-style monochrome button. Label is mono uppercase (eyebrow voice).
 class DsButton extends StatelessWidget {
   const DsButton({
     super.key,
@@ -28,6 +28,7 @@ class DsButton extends StatelessWidget {
     this.onPressed,
     this.variant = DsButtonVariant.outlined,
     this.icon,
+    this.loading = false,
     this.expanded = false,
   });
 
@@ -37,6 +38,7 @@ class DsButton extends StatelessWidget {
     required this.label,
     this.onPressed,
     this.icon,
+    this.loading = false,
     this.expanded = false,
   }) : variant = DsButtonVariant.filled;
 
@@ -45,6 +47,7 @@ class DsButton extends StatelessWidget {
     required this.label,
     this.onPressed,
     this.icon,
+    this.loading = false,
     this.expanded = false,
   }) : variant = DsButtonVariant.ghost;
 
@@ -53,6 +56,7 @@ class DsButton extends StatelessWidget {
     required this.label,
     this.onPressed,
     this.icon,
+    this.loading = false,
     this.expanded = false,
   }) : variant = DsButtonVariant.destructive;
 
@@ -60,6 +64,7 @@ class DsButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final DsButtonVariant variant;
   final IconData? icon;
+  final bool loading;
   final bool expanded;
 
   @override
@@ -80,9 +85,9 @@ class DsButton extends StatelessWidget {
         Colors.transparent,
       ),
       DsButtonVariant.destructive => (
-        Ds.threadRose,
+        dae.onSurface,
         Colors.transparent,
-        Ds.threadRose.withValues(alpha: 0.5),
+        dae.onSurface.withValues(alpha: 0.5),
       ),
     };
 
@@ -95,6 +100,13 @@ class DsButton extends StatelessWidget {
       mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        if (loading) ...[
+          SizedBox.square(
+            dimension: 15,
+            child: DaeLoader(size: 15, strokeWidth: 1.5, color: fg),
+          ),
+          const SizedBox(width: Ds.s2),
+        ],
         if (icon != null) ...[
           Icon(icon, size: 15, color: labelStyle.color),
           const SizedBox(width: Ds.s2),

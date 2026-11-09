@@ -18,7 +18,7 @@ class DsText extends StatelessWidget {
     this.selectable = false,
   });
 
-  /// Bricolage Grotesque 700 @ 34 — page-level display.
+  /// IBM Plex Sans 700 @ 34 — page-level display.
   factory DsText.display(
     String data, {
     Key? key,
@@ -36,7 +36,7 @@ class DsText extends StatelessWidget {
     selectable: selectable,
   );
 
-  /// Bricolage Grotesque 700 @ 28.
+  /// IBM Plex Sans 700 @ 28.
   factory DsText.displaySm(
     String data, {
     Key? key,
@@ -50,7 +50,7 @@ class DsText extends StatelessWidget {
     overflow: overflow,
   );
 
-  /// Bricolage Grotesque 600 @ 20 — section heading.
+  /// IBM Plex Sans 600 @ 20 — section heading.
   factory DsText.section(
     String data, {
     Key? key,

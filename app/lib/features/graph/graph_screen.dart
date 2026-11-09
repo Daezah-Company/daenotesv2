@@ -33,7 +33,31 @@ class GraphScreen extends StatelessWidget {
       backgroundColor: context.dae.background,
       body: SafeArea(
         bottom: false,
-        child: GraphCanvas(onOpenItem: onOpenItem, focusUuid: focusUuid),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            GraphCanvas(onOpenItem: onOpenItem, focusUuid: focusUuid),
+            IgnorePointer(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(Ds.s5, Ds.s4, Ds.s5, 0),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DsText.displaySm('Peta ide'),
+                      const SizedBox(height: Ds.s1),
+                      DsText.caption(
+                        'Geser untuk menjelajah · ketuk dua kali untuk membuka',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

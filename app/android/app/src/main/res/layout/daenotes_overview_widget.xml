@@ -1,0 +1,220 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overview_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="226dp"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="@drawable/daenotes_widget_panel">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@drawable/daenotes_widget_mark_tile"
+            android:src="@drawable/daenotes_brand_icon"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:text="@string/daenotes_overview_title"
+            android:textColor="#FFFFFFFF"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.12" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/daenotes_overview_hint"
+            android:textColor="#B8FFFFFF"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="9dp"
+        android:layout_marginBottom="9dp"
+        android:background="#33FFFFFF" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/daenotes_overview_note_label"
+        android:textColor="#B8FFFFFF"
+        android:textSize="9sp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.12" />
+
+    <LinearLayout
+        android:id="@+id/overview_note_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="36dp"
+        android:gravity="center_vertical"
+        android:orientation="vertical"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp"
+        android:background="@drawable/daenotes_widget_action"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="@string/daenotes_overview_open_note">
+
+        <TextView
+            android:id="@+id/overview_note_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/daenotes_overview_empty_note"
+            android:textColor="#FFFFFFFF"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium" />
+
+        <TextView
+            android:id="@+id/overview_note_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#B8FFFFFF"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="7dp"
+        android:layout_marginBottom="7dp"
+        android:background="#33FFFFFF" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/daenotes_overview_todo_label"
+        android:textColor="#B8FFFFFF"
+        android:textSize="9sp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.12" />
+
+    <TextView
+        android:id="@+id/overview_todo_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="10dp"
+        android:paddingBottom="6dp"
+        android:text="@string/daenotes_overview_empty_todo"
+        android:textColor="#B8FFFFFF"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif" />
+
+    <LinearLayout
+        android:id="@+id/overview_todo_row_1"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <ImageView
+            android:id="@+id/overview_todo_check_1"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:padding="3dp"
+            android:contentDescription="@string/daenotes_overview_check_todo" />
+        <TextView
+            android:id="@+id/overview_todo_title_1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#FFFFFFFF"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium" />
+        <TextView
+            android:id="@+id/overview_todo_due_1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="6dp"
+            android:textColor="#B8FFFFFF"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/overview_todo_row_2"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <ImageView
+            android:id="@+id/overview_todo_check_2"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:padding="3dp"
+            android:contentDescription="@string/daenotes_overview_check_todo" />
+        <TextView
+            android:id="@+id/overview_todo_title_2"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#FFFFFFFF"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium" />
+        <TextView
+            android:id="@+id/overview_todo_due_2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="6dp"
+            android:textColor="#B8FFFFFF"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/overview_todo_row_3"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <ImageView
+            android:id="@+id/overview_todo_check_3"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:padding="3dp"
+            android:contentDescription="@string/daenotes_overview_check_todo" />
+        <TextView
+            android:id="@+id/overview_todo_title_3"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#FFFFFFFF"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium" />
+        <TextView
+            android:id="@+id/overview_todo_due_3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="6dp"
+            android:textColor="#B8FFFFFF"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif" />
+    </LinearLayout>
+</LinearLayout>

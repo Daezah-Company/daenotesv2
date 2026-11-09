@@ -20,6 +20,7 @@ class TodosRepository {
     bool? done,
     DateTime? dueBefore,
     bool archived = false,
+    bool archivedOnly = false,
   }) {
     final q = _db.select(_db.todos)
       ..where((t) => t.deletedAt.isNull())
@@ -27,7 +28,11 @@ class TodosRepository {
         (t) => OrderingTerm.asc(t.done),
         (t) => OrderingTerm.desc(t.updatedAt),
       ]);
-    if (!archived) q.where((t) => t.archivedAt.isNull());
+    if (archivedOnly) {
+      q.where((t) => t.archivedAt.isNotNull());
+    } else if (!archived) {
+      q.where((t) => t.archivedAt.isNull());
+    }
     if (done != null) q.where((t) => t.done.equals(done));
     if (dueBefore != null) {
       q.where(
@@ -56,6 +61,7 @@ class TodosRepository {
   Future<String> create({
     required String title,
     String? notes,
+    String? groupName,
     TodoPriority priority = TodoPriority.normal,
     DateTime? dueAt,
     DateTime? remindAt,
@@ -69,6 +75,7 @@ class TodosRepository {
             uuid: uuid,
             title: Value(title),
             notes: Value(notes),
+            groupName: Value(groupName),
             priority: Value(priority),
             dueAt: Value(dueAt),
             remindAt: Value(remindAt),
@@ -85,6 +92,7 @@ class TodosRepository {
     String uuid, {
     String? title,
     Value<String?>? notes,
+    String? groupName,
     TodoPriority? priority,
     Value<DateTime?>? dueAt,
     Value<DateTime?>? remindAt,
@@ -97,6 +105,7 @@ class TodosRepository {
           row.copyWith(
             title: title ?? row.title,
             notes: notes ?? Value(row.notes),
+            groupName: Value(groupName ?? row.groupName),
             priority: priority ?? row.priority,
             dueAt: dueAt ?? Value(row.dueAt),
             remindAt: remindAt ?? Value(row.remindAt),
@@ -137,6 +146,20 @@ class TodosRepository {
     await _queue(uuid);
   }
 
+  Future<void> restore(String uuid) async {
+    final row = await byUuid(uuid);
+    if (row == null) return;
+    await _db
+        .update(_db.todos)
+        .replace(
+          row.copyWith(
+            archivedAt: const Value<DateTime?>(null),
+            updatedAt: DateTime.now(),
+          ),
+        );
+    await _queue(uuid);
+  }
+
   Future<void> delete(String uuid) async {
     final row = await byUuid(uuid);
     if (row == null || row.deletedAt != null) return;
@@ -162,12 +185,14 @@ class TodosRepository {
     'uuid': row.uuid,
     'title': row.title,
     'notes': row.notes,
+    'group_name': row.groupName,
     'done': row.done,
     if (row.doneAt != null) 'done_at': row.doneAt!.toUtc().toIso8601String(),
     'priority': row.priority.wire,
     if (row.dueAt != null) 'due_at': row.dueAt!.toUtc().toIso8601String(),
     if (row.remindAt != null)
       'remind_at': row.remindAt!.toUtc().toIso8601String(),
+    'archived_at': row.archivedAt?.toUtc().toIso8601String(),
     'updated_at': row.updatedAt.toUtc().toIso8601String(),
   };
 }

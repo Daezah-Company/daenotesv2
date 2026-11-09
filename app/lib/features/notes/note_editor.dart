@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/ds.dart';
 import '../../data/providers.dart';
+import '../collaboration/share_item_sheet.dart';
 import 'dae_providers.dart';
 import 'dae_save.dart';
 import 'linking.dart';
@@ -38,6 +39,7 @@ class _NoteEditorSheetState extends ConsumerState<NoteEditorSheet> {
     text: widget.initialTitle,
   );
   final TextEditingController _body = TextEditingController();
+  final TextEditingController _groupName = TextEditingController();
   String? _uuid;
 
   @override
@@ -46,6 +48,7 @@ class _NoteEditorSheetState extends ConsumerState<NoteEditorSheet> {
     _save.cancel();
     _title.dispose();
     _body.dispose();
+    _groupName.dispose();
     super.dispose();
   }
 
@@ -57,13 +60,18 @@ class _NoteEditorSheetState extends ConsumerState<NoteEditorSheet> {
     final repo = ref.read(notesRepositoryProvider);
     final title = _title.text;
     final body = _body.text;
+    final groupName = _groupName.text.trim();
     if (title.trim().isEmpty && body.trim().isEmpty) return;
     if (_uuid == null) {
-      final created = await repo.create(title: title, body: body);
+      final created = await repo.create(
+        title: title,
+        body: body,
+        groupName: groupName,
+      );
       if (!mounted) return;
       setState(() => _uuid = created);
     } else {
-      await repo.update(_uuid!, title: title, body: body);
+      await repo.update(_uuid!, title: title, body: body, groupName: groupName);
     }
   }
 
@@ -88,6 +96,19 @@ class _NoteEditorSheetState extends ConsumerState<NoteEditorSheet> {
             const SizedBox(height: Ds.s3),
             _BodyField(controller: _body, onChanged: _onChange),
             const SizedBox(height: Ds.s3),
+            DsField(
+              label: 'Grup',
+              child: TextField(
+                controller: _groupName,
+                maxLength: 80,
+                onChanged: _onChange,
+                decoration: const InputDecoration(
+                  hintText: 'Contoh: Kuliah, Kerja, Pribadi',
+                  isDense: true,
+                ),
+              ),
+            ),
+            const SizedBox(height: Ds.s3),
             DsText.caption(_uuid == null ? 'menyimpan otomatis' : 'tersimpan'),
           ],
         ),
@@ -111,6 +132,7 @@ class _NoteDetailScreenState extends ConsumerState<NoteDetailScreen> {
   final _save = DaeDebouncer();
   final TextEditingController _title = TextEditingController();
   final TextEditingController _body = TextEditingController();
+  final TextEditingController _groupName = TextEditingController();
   bool _seeded = false;
 
   @override
@@ -119,24 +141,35 @@ class _NoteDetailScreenState extends ConsumerState<NoteDetailScreen> {
     _save.cancel();
     _title.dispose();
     _body.dispose();
+    _groupName.dispose();
     super.dispose();
   }
 
   void _onChange(String _) => _save.schedule(_persist);
 
   Future<void> _persist() async {
+    if (ref.read(noteByUuidProvider(widget.uuid)).value?.canEdit == false) {
+      return;
+    }
     final repo = ref.read(notesRepositoryProvider);
-    await repo.update(widget.uuid, title: _title.text, body: _body.text);
+    await repo.update(
+      widget.uuid,
+      title: _title.text,
+      body: _body.text,
+      groupName: _groupName.text.trim(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final dae = context.dae;
     final note = ref.watch(noteByUuidProvider(widget.uuid)).value;
+    final canEdit = note?.canEdit ?? true;
 
     if (!_seeded && note != null) {
       _title.text = note.title;
       _body.text = note.body;
+      _groupName.text = note.groupName ?? '';
       _seeded = true;
     }
 
@@ -159,12 +192,25 @@ class _NoteDetailScreenState extends ConsumerState<NoteDetailScreen> {
                 children: [
                   _PinToggle(
                     pinned: note?.pinned ?? false,
+                    enabled: canEdit,
                     onToggle: () {
                       final repo = ref.read(notesRepositoryProvider);
                       repo.setPinned(widget.uuid, !(note?.pinned ?? false));
                     },
                   ),
-                  if (note != null && note.archivedAt == null)
+                  IconButton(
+                    tooltip: 'Kolaborator',
+                    icon: Icon(
+                      Icons.person_add_alt_1,
+                      color: dae.onSurfaceSecondary,
+                    ),
+                    onPressed: () => ShareItemSheet.show(
+                      context,
+                      type: 'note',
+                      uuid: widget.uuid,
+                    ),
+                  ),
+                  if (note != null && note.archivedAt == null && canEdit)
                     IconButton(
                       tooltip: 'Arsipkan',
                       icon: Icon(
@@ -183,9 +229,33 @@ class _NoteDetailScreenState extends ConsumerState<NoteDetailScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(Ds.s4, Ds.s2, Ds.s4, Ds.s8),
                 children: [
-                  _TitleField(controller: _title, onChanged: _onChange),
+                  if (!canEdit)
+                    DsText.caption('Hanya melihat · akses diatur pemilik.'),
+                  _TitleField(
+                    controller: _title,
+                    onChanged: _onChange,
+                    readOnly: !canEdit,
+                  ),
                   const SizedBox(height: Ds.s3),
-                  _BodyField(controller: _body, onChanged: _onChange),
+                  _BodyField(
+                    controller: _body,
+                    onChanged: _onChange,
+                    readOnly: !canEdit,
+                  ),
+                  const SizedBox(height: Ds.s4),
+                  DsField(
+                    label: 'Grup',
+                    child: TextField(
+                      controller: _groupName,
+                      maxLength: 80,
+                      readOnly: !canEdit,
+                      onChanged: _onChange,
+                      decoration: const InputDecoration(
+                        hintText: 'Contoh: Kuliah, Kerja, Pribadi',
+                        isDense: true,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: Ds.s6),
                   Divider(color: dae.hairline.withValues(alpha: 0.28)),
                   const SizedBox(height: Ds.s4),
@@ -202,10 +272,15 @@ class _NoteDetailScreenState extends ConsumerState<NoteDetailScreen> {
 
 /// Shared borderless title field used by both the sheet and the detail screen.
 class _TitleField extends StatelessWidget {
-  const _TitleField({required this.controller, required this.onChanged});
+  const _TitleField({
+    required this.controller,
+    required this.onChanged,
+    this.readOnly = false,
+  });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -213,6 +288,7 @@ class _TitleField extends StatelessWidget {
     return TextField(
       controller: controller,
       onChanged: onChanged,
+      readOnly: readOnly,
       textCapitalization: TextCapitalization.sentences,
       style: DsType.display(size: Ds.displayM, color: dae.onSurface),
       decoration: InputDecoration(
@@ -233,10 +309,15 @@ class _TitleField extends StatelessWidget {
 }
 
 class _BodyField extends StatelessWidget {
-  const _BodyField({required this.controller, required this.onChanged});
+  const _BodyField({
+    required this.controller,
+    required this.onChanged,
+    this.readOnly = false,
+  });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -244,6 +325,7 @@ class _BodyField extends StatelessWidget {
     return TextField(
       controller: controller,
       onChanged: onChanged,
+      readOnly: readOnly,
       minLines: 1,
       maxLines: null,
       keyboardType: TextInputType.multiline,
@@ -263,10 +345,15 @@ class _BodyField extends StatelessWidget {
 }
 
 class _PinToggle extends StatelessWidget {
-  const _PinToggle({required this.pinned, required this.onToggle});
+  const _PinToggle({
+    required this.pinned,
+    required this.onToggle,
+    this.enabled = true,
+  });
 
   final bool pinned;
   final VoidCallback onToggle;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -277,7 +364,7 @@ class _PinToggle extends StatelessWidget {
         pinned ? Icons.push_pin : Icons.push_pin_outlined,
         color: pinned ? dae.onSurface : dae.onSurfaceSecondary,
       ),
-      onPressed: onToggle,
+      onPressed: enabled ? onToggle : null,
     );
   }
 }

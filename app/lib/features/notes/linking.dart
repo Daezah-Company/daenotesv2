@@ -140,7 +140,7 @@ class _NeighborRow extends StatelessWidget {
                           icon: Icon(
                             Icons.link_off,
                             size: 18,
-                            color: Ds.threadRose,
+                            color: context.dae.onSurface,
                           ),
                           onPressed: onUnlink,
                         ),

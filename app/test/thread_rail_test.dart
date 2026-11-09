@@ -32,7 +32,7 @@ void main() {
         matching: find.byType(ColoredBox),
       );
       expect(rail, findsOneWidget);
-      expect(tester.widget<ColoredBox>(rail).color, Ds.threadAmber);
+      expect(tester.widget<ColoredBox>(rail).color, Ds.paper);
       expect(tester.getSize(find.byType(ThreadRail)).width, Ds.railWidth);
     });
 

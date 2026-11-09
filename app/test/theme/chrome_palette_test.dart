@@ -14,37 +14,24 @@ double _contrast(Color a, Color b) {
 }
 
 void main() {
-  group('chrome palette (CONTRACT §6)', () {
-    test('neutral chrome matches the contract hexes', () {
+  group('monochrome palette (CONTRACT §6)', () {
+    test('chrome uses only graphite and white', () {
       expect(Ds.ink, const Color(0xFF282828));
-      expect(Ds.inkDeep, const Color(0xFF1C1C1B));
-      expect(Ds.inkLift, const Color(0xFF353533));
+      expect(Ds.inkDeep, Ds.ink);
+      expect(Ds.inkLift, Ds.ink);
       expect(Ds.paper, const Color(0xFFFFFFFF));
-      expect(Ds.paperVeil, const Color(0xFF8B8B84));
+      expect(Ds.paperVeil, const Color(0xB8FFFFFF));
     });
 
-    test('no green tint survives in the chrome tokens', () {
+    test('semantic marks and relation roles stay monochrome', () {
       for (final c in [
-        Ds.ink,
-        Ds.inkDeep,
-        Ds.inkLift,
-        Ds.paper,
-        Ds.paperVeil,
+        Ds.threadAmber,
+        Ds.threadMoss,
+        Ds.threadSlate,
+        Ds.threadRose,
       ]) {
-        // Green-dominant was the drift; a warm-neutral grey is fine.
-        expect(
-          c.g,
-          lessThanOrEqualTo(math.max(c.r, c.b) + 0.004),
-          reason: '$c is green-dominant — chrome stays graphite/paper',
-        );
+        expect(c, Ds.ink);
       }
-    });
-
-    test('connection threads keep their colours — colour is relation', () {
-      expect(Ds.threadAmber, const Color(0xFFE3B23C));
-      expect(Ds.threadMoss, const Color(0xFF6FA88A));
-      expect(Ds.threadSlate, const Color(0xFF7FA0C8));
-      expect(Ds.threadRose, const Color(0xFFC9768F));
     });
   });
 
@@ -71,14 +58,7 @@ void main() {
     test('primary text clears AA and threads stay legible on the canvas', () {
       expect(_contrast(dark().onSurface, dark().background), greaterThan(12));
       expect(_contrast(light().onSurface, light().background), greaterThan(12));
-      for (final thread in [
-        Ds.threadAmber,
-        Ds.threadMoss,
-        Ds.threadSlate,
-        Ds.threadRose,
-      ]) {
-        expect(_contrast(thread, dark().background), greaterThanOrEqualTo(3));
-      }
+      expect(_contrast(dark().onSurface, dark().background), greaterThan(12));
     });
   });
 }

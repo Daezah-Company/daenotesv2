@@ -1,0 +1,24 @@
+{
+  "apps": [
+    {
+      "name": "DaeNotes V2",
+      "description": "Catatan dan tugas yang sederhana, tersinkron antar akun, dengan widget untuk menangkap dan melihat item penting dari layar utama.",
+      "icon": "logo.png",
+      "platform": "Android",
+      "category": "Produktivitas",
+      "releases": [
+        {
+          "version": "1.0.6",
+          "build": 9,
+          "released": "2026-11-04",
+          "released_label": "4 November 2026",
+          "file": "downloads/DaeNotesV2.apk",
+          "notes": [
+            "Widget Terdekat menampilkan catatan terbaru dan tugas yang akan datang.",
+            "Tugas yang dapat diedit bisa ditandai selesai langsung dari widget."
+          ]
+        }
+      ]
+    }
+  ]
+}

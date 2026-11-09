@@ -260,6 +260,7 @@ void main() {
 Note _mkNote(String uuid, String title) => Note(
   id: 1,
   uuid: uuid,
+  canEdit: true,
   title: title,
   body: '',
   pinned: false,

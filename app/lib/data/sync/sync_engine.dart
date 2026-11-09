@@ -88,10 +88,12 @@ class SyncEngine {
     _connectivitySub = network.changes.listen((online) {
       if (online) unawaited(syncWithRetry());
     });
+    // Pull even with an empty outbox: collaborators need to receive items and
+    // revocations created by another account without making a local edit first.
     _ticker = Timer.periodic(const Duration(seconds: 45), (_) {
-      unawaited(syncIfPending());
+      unawaited(syncWithRetry());
     });
-    unawaited(syncIfPending());
+    unawaited(syncWithRetry());
   }
 
   Future<void> stop() async {
@@ -294,8 +296,16 @@ class SyncEngine {
             );
           }
         }
-        if (result.serverTime != null) {
-          await db.setLastSyncedAt(result.serverTime!);
+        for (final entry in result.revoked) {
+          final table = _tableForWire(entry.table);
+          if (table == null) continue;
+          await applier.revokeShared(table.wire, entry.uuid);
+        }
+        for (final entry in result.readOnly) {
+          final table = _tableForWire(entry.table);
+          if (table == null) continue;
+          await applier.applyReadOnly(table.wire, entry.serverRow);
+          await outbox.remove(table, entry.uuid);
         }
       });
 

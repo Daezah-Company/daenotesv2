@@ -24,8 +24,14 @@ class AuthController extends AsyncNotifier<AuthSession?> {
   }
 
   Future<void> logout() async {
-    await ref.read(authRepositoryProvider).logout();
-    state = const AsyncData(null);
+    state = const AsyncLoading();
+    try {
+      await ref.read(authRepositoryProvider).logout();
+    } finally {
+      // The repository clears local credentials even when the server is
+      // unreachable. Never strand the router on its session-check screen.
+      state = const AsyncData(null);
+    }
   }
 
   /// Called by the Dio 401 interceptor — token is already cleared there.

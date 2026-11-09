@@ -1,0 +1,198 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fillViewport="false"
+    android:clipToPadding="false"
+    android:scrollbarStyle="outsideOverlay">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:background="@drawable/daenotes_capture_panel">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="38dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@drawable/daenotes_widget_mark_tile"
+                android:src="@drawable/daenotes_brand_icon"
+                android:contentDescription="DaeNotes" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/daenotes_widget_brand"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.14" />
+
+                <TextView
+                    android:id="@+id/capture_eyebrow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/capture_kicker"
+                    android:textColor="#B8FFFFFF"
+                    android:textSize="9sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.12" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="22dp"
+                android:background="#40FFFFFF" />
+
+            <ImageView
+                android:id="@+id/capture_close"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:padding="12dp"
+                android:src="@drawable/daenotes_capture_close"
+                android:contentDescription="Tutup" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/capture_heading"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/capture_new_note"
+            android:textColor="#FFFFFFFF"
+            android:textSize="24sp"
+            android:fontFamily="sans-serif"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Simpan ide dengan cepat. Rapikan nanti."
+            android:textColor="#B8FFFFFF"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif" />
+
+        <TextView
+            android:id="@+id/capture_title_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/capture_note_title"
+            android:textColor="#B8FFFFFF"
+            android:textSize="10sp"
+            android:fontFamily="monospace"
+            android:letterSpacing="0.08" />
+
+        <EditText
+            android:id="@+id/capture_title"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginTop="7dp"
+            android:background="@drawable/daenotes_capture_field"
+            android:hint="@string/capture_note_hint"
+            android:paddingStart="13dp"
+            android:paddingEnd="13dp"
+            android:singleLine="true"
+            android:imeOptions="actionNext"
+            android:inputType="textCapSentences"
+            android:textColor="#FFFFFFFF"
+            android:textColorHint="#88FFFFFF"
+            android:textSize="15sp"
+            android:fontFamily="sans-serif" />
+
+        <TextView
+            android:id="@+id/capture_error"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:text="@string/capture_validation_title"
+            android:textColor="#FFFFFFFF"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/capture_body_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="ISI CATATAN · OPSIONAL"
+            android:textColor="#B8FFFFFF"
+            android:textSize="10sp"
+            android:fontFamily="monospace"
+            android:letterSpacing="0.08" />
+
+        <EditText
+            android:id="@+id/capture_body"
+            android:layout_width="match_parent"
+            android:layout_height="94dp"
+            android:layout_marginTop="7dp"
+            android:background="@drawable/daenotes_capture_field"
+            android:gravity="top|start"
+            android:hint="Tambahkan beberapa detail"
+            android:inputType="textCapSentences|textMultiLine"
+            android:maxLines="4"
+            android:minLines="3"
+            android:padding="13dp"
+            android:textColor="#FFFFFFFF"
+            android:textColorHint="#88FFFFFF"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="20dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/capture_cancel"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/daenotes_capture_secondary"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="BATAL"
+                android:textColor="#FFFFFFFF"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.08" />
+
+            <View
+                android:layout_width="10dp"
+                android:layout_height="1dp" />
+
+            <TextView
+                android:id="@+id/capture_save"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.2"
+                android:background="@drawable/daenotes_capture_primary"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+            android:text="@string/capture_save_note"
+                android:textColor="#FF282828"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.05" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

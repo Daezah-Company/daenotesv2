@@ -1,43 +1,50 @@
-# DaeNotes — app Flutter
+# DaeNotes Android app
 
-Offline-first: semua baca/tulis lewat drift (`lib/data/db/`), sinkronisasi behind
-melalui outbox + `SyncEngine`. Lihat `docs/CONTRACT.md` untuk kontrak API dan
-`docs/DECISIONS.md` untuk deviation.
+Klien Flutter untuk DaeNotes. Data disimpan secara lokal menggunakan Drift; `SyncEngine` mengirim dan menerima perubahan dari API Laravel. Ringkasan setup seluruh repositori ada di [README utama](../README.md).
 
 ## Menjalankan
 
 ```bash
-# 1. backend (dari repo root)
-cd ../backend && cp .env.example .env   # lalu isi DB_* + php artisan key:generate
-php artisan migrate --force
-php artisan serve                        # http://localhost:8000
-
-# 2. app
+cd app
 flutter pub get
 flutter run
 ```
 
-URL API dibaca dari `String.fromEnvironment(DAENOTES_API_URL)`, default
-`http://localhost:8000/api`. Untuk emulator Android, `localhost` adalah perangkat
-itu sendiri, jadi arahkan ke host:
+URL API default adalah `https://apidaenotes.daezah.com/api`. Untuk mengarahkan aplikasi ke backend lokal, gunakan `DAENOTES_API_URL`:
 
 ```bash
+# Android Emulator
 flutter run --dart-define=DAENOTES_API_URL=http://10.0.2.2:8000/api
+
+# Genymotion; sesuaikan alamat jika konfigurasi jaringan berbeda
+flutter run --dart-define=DAENOTES_API_URL=http://10.0.3.2:8000/api
 ```
 
-## Verifikasi
+Untuk perangkat fisik, gunakan IP LAN komputer yang menjalankan backend. Backend perlu mendengarkan pada `0.0.0.0` dan dapat dijangkau dari ponsel.
+
+## Build APK
+
+```bash
+flutter build apk --release --dart-define=DAENOTES_API_URL=https://apidaenotes.daezah.com/api
+```
+
+Hasilnya ada di `build/app/outputs/flutter-apk/app-release.apk`.
+
+## Verifikasi dan code generation
 
 ```bash
 flutter analyze
 flutter test
-dart run build_runner build --delete-conflicting-outputs   # regenerasi database.g.dart
+dart run build_runner build --delete-conflicting-outputs
 ```
 
-`flutter test` butuh `dart format` yang jalan (pre-commit pakai `dart format lib test`).
+Jalankan `build_runner` setelah mengubah tabel atau query Drift yang memerlukan pembaruan `lib/data/db/database.g.dart`.
 
-## Catatan platform
+## Area utama kode
 
-Notifikasi reminder memakai `flutter_local_notifications` + `timezone`; izin
-`POST_NOTIFICATIONS` dan exact alarm diminta saat pertama boot scheduler
-(`lib/main.dart`). build APK butuh JDK 17 yang belum terpasang di mesin ini, dan
-build desktop Linux butuh `libsecret-1-dev` (dependensi `flutter_secure_storage`).
+- `lib/data/db/` — database lokal Drift.
+- `lib/data/sync/` — antrean perubahan dan sinkronisasi API.
+- `lib/data/auth/` — sesi dan autentikasi akun.
+- `lib/features/` — layar catatan, tugas, graph, kolaborasi, pengingat, dan pengaturan.
+- `android/app/src/main/` — konfigurasi Android, notifikasi, dan widget layar utama.
+- `test/` — pengujian unit dan widget.

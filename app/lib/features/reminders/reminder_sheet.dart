@@ -102,7 +102,7 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const DsEyebrow('Pengingat baru', accent: Ds.threadRose),
+                const DsEyebrow('Pengingat baru'),
                 const SizedBox(height: Ds.s3),
                 DsText.body(
                   widget.title,
@@ -256,7 +256,7 @@ class _ShortcutChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final dae = context.dae;
     final border = selected
-        ? Ds.threadRose
+        ? dae.onSurface
         : dae.hairline.withValues(alpha: 0.4);
     return DsPressable(
       child: GestureDetector(

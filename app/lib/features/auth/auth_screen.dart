@@ -56,28 +56,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Object? _acknowledgedError;
 
   @override
-  void initState() {
-    super.initState();
-    for (final c in [_name, _email, _password]) {
-      c.addListener(_onEditing);
-    }
-  }
-
-  @override
   void dispose() {
-    for (final c in [_name, _email, _password]) {
-      c.removeListener(_onEditing);
-      c.dispose();
-    }
+    _name.dispose();
+    _email.dispose();
+    _password.dispose();
     super.dispose();
   }
 
   /// Typing away a wire failure dismisses it; the next submit re-arms it so a
   /// repeated failure is announced again.
-  void _onEditing() {
+  void _onEditing(AuthFieldKind kind) {
     final error = ref.read(authControllerProvider).error;
-    if (error == null || identical(error, _acknowledgedError)) return;
-    setState(() => _acknowledgedError = error);
+    final acknowledgesWireError =
+        error != null && !identical(error, _acknowledgedError);
+    final clearsLocalError = _localErrors.containsKey(kind);
+    if (!acknowledgesWireError && !clearsLocalError) return;
+    setState(() {
+      if (acknowledgesWireError) _acknowledgedError = error;
+      _localErrors.remove(kind);
+    });
   }
 
   void _switchMode() {
@@ -187,6 +184,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       hint: 'nama yang tampil di akun Anda',
                       controller: _name,
                       error: errors[AuthFieldKind.name],
+                      onChanged: (_) => _onEditing(AuthFieldKind.name),
                       keyboardType: TextInputType.name,
                       autofillHints: const [AutofillHints.name],
                     ),
@@ -196,6 +194,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     hint: 'anda@surel.com',
                     controller: _email,
                     error: errors[AuthFieldKind.email],
+                    onChanged: (_) => _onEditing(AuthFieldKind.email),
                     keyboardType: TextInputType.emailAddress,
                     autofillHints: const [AutofillHints.email],
                   ),
@@ -207,6 +206,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         : 'kata sandi akun Anda',
                     controller: _password,
                     error: errors[AuthFieldKind.password],
+                    onChanged: (_) => _onEditing(AuthFieldKind.password),
                     obscure: !_reveal,
                     revealTooltip: _reveal
                         ? 'Sembunyikan sandi'
@@ -229,6 +229,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           : registering
                           ? 'Daftar'
                           : 'Masuk',
+                      loading: busy,
                       expanded: true,
                       onPressed: busy ? null : _submit,
                     ),
@@ -268,15 +269,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 }
 
 /// Wordmark plus the signature: one thread drawn down the left of the name,
-/// as the mark of things being connected. Bichrome on purpose — on this
-/// surface nothing is linked yet, so no thread colour may be worn as
+/// as the mark of things being connected. Monochrome on purpose — on this
+/// surface nothing is linked yet, so no accent hue may be worn as
 /// decoration (contract §6). [ThreadRail] collapses the draw under
 /// reduce-motion, so this is the only choreography on the screen.
 class AuthMasthead extends StatelessWidget {
   const AuthMasthead({super.key});
 
-  /// Height of the drawn thread beside the wordmark.
-  static const double markHeight = 52;
+  /// Height of the original DaeNotes wordmark beside the signature rail.
+  static const double markHeight = 64;
 
   @override
   Widget build(BuildContext context) {
@@ -300,7 +301,24 @@ class AuthMasthead extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                DsText.display('DaeNotes'),
+                Semantics(
+                  label: 'DaeNotes',
+                  image: true,
+                  child: ColorFiltered(
+                    colorFilter: ColorFilter.mode(
+                      dae.onSurface,
+                      BlendMode.srcIn,
+                    ),
+                    child: Image.asset(
+                      'assets/branding/daenotes_wordmark.png',
+                      width: 94,
+                      height: markHeight,
+                      alignment: Alignment.centerLeft,
+                      fit: BoxFit.contain,
+                      excludeFromSemantics: true,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: Ds.s1),
                 const DsEyebrow('catatan & tugas yang terhubung'),
               ],
@@ -312,7 +330,7 @@ class AuthMasthead extends StatelessWidget {
   }
 }
 
-/// Wire failure the form could not attach to one field. The rose rail reads as
+/// Wire failure the form could not attach to one field. The monochrome rail reads as
 /// a status; the words carry the meaning, and the live region re-announces it
 /// for screen readers.
 class AuthFailureBanner extends StatelessWidget {

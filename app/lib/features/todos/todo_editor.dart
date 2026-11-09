@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/ds.dart';
 import '../../data/model/enums.dart';
 import '../../data/providers.dart';
+import '../collaboration/share_item_sheet.dart';
 import '../notes/dae_providers.dart';
 import '../notes/dae_save.dart';
 import '../notes/linking.dart';
@@ -41,6 +42,7 @@ class _TodoEditorSheetState extends ConsumerState<TodoEditorSheet> {
     text: widget.initialTitle,
   );
   final TextEditingController _note = TextEditingController();
+  final TextEditingController _groupName = TextEditingController();
   TodoPriority _priority = TodoPriority.normal;
   String? _uuid;
 
@@ -50,6 +52,7 @@ class _TodoEditorSheetState extends ConsumerState<TodoEditorSheet> {
     _save.cancel();
     _title.dispose();
     _note.dispose();
+    _groupName.dispose();
     super.dispose();
   }
 
@@ -59,17 +62,24 @@ class _TodoEditorSheetState extends ConsumerState<TodoEditorSheet> {
     final repo = ref.read(todosRepositoryProvider);
     final title = _title.text;
     final note = _note.text;
+    final groupName = _groupName.text.trim();
     if (title.trim().isEmpty && note.trim().isEmpty) return;
     if (_uuid == null) {
       final created = await repo.create(
         title: title,
         notes: note,
+        groupName: groupName,
         priority: _priority,
       );
       if (!mounted) return;
       setState(() => _uuid = created);
     } else {
-      await repo.update(_uuid!, title: title, notes: Value(note));
+      await repo.update(
+        _uuid!,
+        title: title,
+        notes: Value(note),
+        groupName: groupName,
+      );
     }
   }
 
@@ -110,6 +120,19 @@ class _TodoEditorSheetState extends ConsumerState<TodoEditorSheet> {
             ),
             const SizedBox(height: Ds.s4),
             DsField(
+              label: 'Grup',
+              child: TextField(
+                controller: _groupName,
+                maxLength: 80,
+                onChanged: _onChange,
+                decoration: const InputDecoration(
+                  hintText: 'Contoh: Kuliah, Kerja, Pribadi',
+                  isDense: true,
+                ),
+              ),
+            ),
+            const SizedBox(height: Ds.s3),
+            DsField(
               label: 'Prioritas',
               child: DsPriorityPicker(
                 value: _priority,
@@ -140,6 +163,7 @@ class _TodoDetailScreenState extends ConsumerState<TodoDetailScreen> {
   final _save = DaeDebouncer();
   final TextEditingController _title = TextEditingController();
   final TextEditingController _note = TextEditingController();
+  final TextEditingController _groupName = TextEditingController();
   bool _seeded = false;
 
   @override
@@ -148,21 +172,29 @@ class _TodoDetailScreenState extends ConsumerState<TodoDetailScreen> {
     _save.cancel();
     _title.dispose();
     _note.dispose();
+    _groupName.dispose();
     super.dispose();
   }
 
   void _onChange(String _) => _save.schedule(_persist);
 
   Future<void> _persist() async {
+    if (ref.read(todoByUuidProvider(widget.uuid)).value?.canEdit == false) {
+      return;
+    }
     final repo = ref.read(todosRepositoryProvider);
     await repo.update(
       widget.uuid,
       title: _title.text,
       notes: Value(_note.text),
+      groupName: _groupName.text.trim(),
     );
   }
 
   Future<void> _pickDue(DateTime? current) async {
+    if (ref.read(todoByUuidProvider(widget.uuid)).value?.canEdit == false) {
+      return;
+    }
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -185,6 +217,9 @@ class _TodoDetailScreenState extends ConsumerState<TodoDetailScreen> {
   }
 
   Future<void> _pickReminder(DateTime? current) async {
+    if (ref.read(todoByUuidProvider(widget.uuid)).value?.canEdit == false) {
+      return;
+    }
     final now = DateTime.now();
     final date = await showDatePicker(
       context: context,
@@ -220,10 +255,12 @@ class _TodoDetailScreenState extends ConsumerState<TodoDetailScreen> {
   Widget build(BuildContext context) {
     final dae = context.dae;
     final todo = ref.watch(todoByUuidProvider(widget.uuid)).value;
+    final canEdit = todo?.canEdit ?? true;
 
     if (!_seeded && todo != null) {
       _title.text = todo.title;
       _note.text = todo.notes ?? '';
+      _groupName.text = todo.groupName ?? '';
       _seeded = true;
     }
 
@@ -243,6 +280,9 @@ class _TodoDetailScreenState extends ConsumerState<TodoDetailScreen> {
           children: [
             _TodoHeader(
               done: done,
+              canEdit: canEdit,
+              onShare: () =>
+                  ShareItemSheet.show(context, type: 'todo', uuid: widget.uuid),
               onToggle: () {
                 // Optimistic: local write lands immediately, the drift stream
                 // repaints the check, the outbox syncs in the background.
@@ -253,9 +293,12 @@ class _TodoDetailScreenState extends ConsumerState<TodoDetailScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(Ds.s4, Ds.s2, Ds.s4, Ds.s8),
                 children: [
+                  if (!canEdit)
+                    DsText.caption('Hanya melihat · akses diatur pemilik.'),
                   TextField(
                     controller: _title,
                     onChanged: _onChange,
+                    readOnly: !canEdit,
                     maxLines: null,
                     style: DsType.display(
                       size: Ds.displayM,
@@ -273,10 +316,25 @@ class _TodoDetailScreenState extends ConsumerState<TodoDetailScreen> {
                   ),
                   const SizedBox(height: Ds.s5),
                   DsField(
+                    label: 'Grup',
+                    child: TextField(
+                      controller: _groupName,
+                      maxLength: 80,
+                      onChanged: _onChange,
+                      readOnly: !canEdit,
+                      decoration: const InputDecoration(
+                        hintText: 'Contoh: Kuliah, Kerja, Pribadi',
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: Ds.s5),
+                  DsField(
                     label: 'Catatan',
                     child: TextField(
                       controller: _note,
                       onChanged: _onChange,
+                      readOnly: !canEdit,
                       minLines: 1,
                       maxLines: null,
                       keyboardType: TextInputType.multiline,
@@ -293,35 +351,41 @@ class _TodoDetailScreenState extends ConsumerState<TodoDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: Ds.s5),
-                  DsField(
-                    label: 'Prioritas',
-                    child: DsPriorityPicker(
-                      value: todo?.priority ?? TodoPriority.normal,
-                      onChanged: (p) => ref
-                          .read(todosRepositoryProvider)
-                          .update(widget.uuid, priority: p),
+                  IgnorePointer(
+                    ignoring: !canEdit,
+                    child: DsField(
+                      label: 'Prioritas',
+                      child: DsPriorityPicker(
+                        value: todo?.priority ?? TodoPriority.normal,
+                        onChanged: (p) => ref
+                            .read(todosRepositoryProvider)
+                            .update(widget.uuid, priority: p),
+                      ),
                     ),
                   ),
                   const SizedBox(height: Ds.s4),
-                  DsField(
-                    label: 'Waktu',
-                    child: Column(
-                      children: [
-                        _DateActionRow(
-                          icon: Icons.event_outlined,
-                          label: 'Tenggat',
-                          value: todo?.dueAt,
-                          onPick: () => _pickDue(todo?.dueAt),
-                        ),
-                        const SizedBox(height: Ds.s2),
-                        _DateActionRow(
-                          icon: Icons.notifications_none,
-                          label: 'Pengingat',
-                          value: todo?.remindAt,
-                          isReminder: true,
-                          onPick: () => _pickReminder(todo?.remindAt),
-                        ),
-                      ],
+                  IgnorePointer(
+                    ignoring: !canEdit,
+                    child: DsField(
+                      label: 'Waktu',
+                      child: Column(
+                        children: [
+                          _DateActionRow(
+                            icon: Icons.event_outlined,
+                            label: 'Tenggat',
+                            value: todo?.dueAt,
+                            onPick: () => _pickDue(todo?.dueAt),
+                          ),
+                          const SizedBox(height: Ds.s2),
+                          _DateActionRow(
+                            icon: Icons.notifications_none,
+                            label: 'Pengingat',
+                            value: todo?.remindAt,
+                            isReminder: true,
+                            onPick: () => _pickReminder(todo?.remindAt),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: Ds.s6),
@@ -339,10 +403,17 @@ class _TodoDetailScreenState extends ConsumerState<TodoDetailScreen> {
 }
 
 class _TodoHeader extends StatelessWidget {
-  const _TodoHeader({required this.done, required this.onToggle});
+  const _TodoHeader({
+    required this.done,
+    required this.canEdit,
+    required this.onToggle,
+    required this.onShare,
+  });
 
   final bool done;
+  final bool canEdit;
   final VoidCallback onToggle;
+  final VoidCallback onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -357,11 +428,16 @@ class _TodoHeader extends StatelessWidget {
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           Expanded(child: DsEyebrow('Tugas')),
+          IconButton(
+            tooltip: 'Kolaborator',
+            icon: Icon(Icons.person_add_alt_1, color: dae.onSurfaceSecondary),
+            onPressed: onShare,
+          ),
           DsButton.ghost(
             label: done ? 'Buka lagi' : 'Tandai selesai',
-            onPressed: onToggle,
+            onPressed: canEdit ? onToggle : null,
           ),
-          DsCheckToggle(done: done, onTap: onToggle, size: 24),
+          DsCheckToggle(done: done, onTap: canEdit ? onToggle : null, size: 24),
         ],
       ),
     );

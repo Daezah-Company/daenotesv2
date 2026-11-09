@@ -9,12 +9,29 @@ class TokenStorage {
 
   static const _tokenKey = 'daenotes.token';
   static const _userKey = 'daenotes.user';
+  static const _legacyDatabaseOwnerKey = 'daenotes.database_owner';
 
   final FlutterSecureStorage _storage;
 
   String? _cachedToken;
+  int? _cachedLegacyDatabaseOwnerId;
 
   String? get cachedToken => _cachedToken;
+  int? get legacyDatabaseOwnerId => _cachedLegacyDatabaseOwnerId;
+
+  Future<void> bindLegacyDatabaseOwner(int userId) async {
+    if (userId <= 0 || _cachedLegacyDatabaseOwnerId != null) return;
+    final stored = await _storage.read(key: _legacyDatabaseOwnerKey);
+    final parsed = int.tryParse(stored ?? '');
+    if (parsed != null && parsed > 0) {
+      _cachedLegacyDatabaseOwnerId = parsed;
+      return;
+    }
+    // Existing installs keep using their original `daenotes` file for the
+    // first account that successfully signs in after the upgrade.
+    _cachedLegacyDatabaseOwnerId = userId;
+    await _storage.write(key: _legacyDatabaseOwnerKey, value: '$userId');
+  }
 
   Future<String?> readToken() async =>
       _cachedToken ??= await _storage.read(key: _tokenKey);

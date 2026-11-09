@@ -4,6 +4,7 @@
 library;
 
 export 'dae_types.dart';
+export 'dae_mark.dart';
 export 'ds_button.dart';
 export 'ds_card.dart';
 export 'ds_eyebrow.dart';

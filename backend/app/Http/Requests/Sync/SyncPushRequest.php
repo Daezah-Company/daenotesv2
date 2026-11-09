@@ -26,10 +26,12 @@ class SyncPushRequest extends FormRequest
         return [
             'notes' => ['sometimes', 'array'],
             'notes.*.uuid' => ['required', 'string', 'max:36'],
+            'notes.*.group_name' => ['nullable', 'string', 'max:80'],
             'notes.*.updated_at' => ['sometimes', 'date'],
 
             'todos' => ['sometimes', 'array'],
             'todos.*.uuid' => ['required', 'string', 'max:36'],
+            'todos.*.group_name' => ['nullable', 'string', 'max:80'],
             'todos.*.updated_at' => ['sometimes', 'date'],
 
             'links' => ['sometimes', 'array'],
@@ -80,11 +82,17 @@ class SyncPushRequest extends FormRequest
                 'note' => ItemResolver::knownUuids('note', $unseen['note']),
                 'todo' => ItemResolver::knownUuids('todo', $unseen['todo']),
             ];
+            $revoked = [
+                'note' => ItemResolver::revokedUuids('note', $unseen['note'], (int) $this->user()->id),
+                'todo' => ItemResolver::revokedUuids('todo', $unseen['todo'], (int) $this->user()->id),
+            ];
 
             foreach ($references as $reference) {
                 $type = $reference['type'];
 
-                if (in_array($reference['uuid'], $pushed[$type] ?? [], true) || isset($known[$type][$reference['uuid']])) {
+                if (in_array($reference['uuid'], $pushed[$type] ?? [], true)
+                    || isset($known[$type][$reference['uuid']])
+                    || isset($revoked[$type][$reference['uuid']])) {
                     continue;
                 }
 

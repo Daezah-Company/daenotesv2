@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CollaborationController;
 use App\Http\Controllers\GraphController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\NoteController;
@@ -20,6 +21,15 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('collaboration/{type}/{uuid}', [CollaborationController::class, 'index'])
+        ->where(['type' => 'note|todo', 'uuid' => '[A-Za-z0-9-]+']);
+    Route::post('collaboration/{type}/{uuid}', [CollaborationController::class, 'store'])
+        ->where(['type' => 'note|todo', 'uuid' => '[A-Za-z0-9-]+']);
+    Route::put('collaboration/{type}/{uuid}/{userId}', [CollaborationController::class, 'update'])
+        ->where(['type' => 'note|todo', 'uuid' => '[A-Za-z0-9-]+', 'userId' => '[0-9]+']);
+    Route::delete('collaboration/{type}/{uuid}/{userId}', [CollaborationController::class, 'destroy'])
+        ->where(['type' => 'note|todo', 'uuid' => '[A-Za-z0-9-]+', 'userId' => '[0-9]+']);
+
     Route::get('notes', [NoteController::class, 'index']);
     Route::post('notes', [NoteController::class, 'store']);
     Route::get('notes/{uuid}', [NoteController::class, 'show'])->where('uuid', '[A-Za-z0-9-]+');

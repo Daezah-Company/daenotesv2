@@ -4,22 +4,22 @@ import 'package:google_fonts/google_fonts.dart';
 import 'ds_tokens.dart';
 
 /// Resolved type styles for the three DaeNotes families.
-/// Display: Bricolage Grotesque, body/UI: IBM Plex Sans,
-/// utility/data/dates: IBM Plex Mono.
+/// Swiss typographic system: IBM Plex Sans for hierarchy and body, IBM Plex
+/// Mono for compact utility data.
 abstract final class DsType {
   static TextStyle display({
     double size = Ds.displayL,
     FontWeight weight = FontWeight.w700,
     Color? color,
-  }) => GoogleFonts.bricolageGrotesque(
+  }) => GoogleFonts.ibmPlexSans(
     fontSize: size,
     fontWeight: weight,
     height: 1.12,
     color: color,
   );
 
-  /// Section heading — Bricolage 600 at 20px.
-  static TextStyle section({Color? color}) => GoogleFonts.bricolageGrotesque(
+  /// Section heading — clear, compact grotesk hierarchy.
+  static TextStyle section({Color? color}) => GoogleFonts.ibmPlexSans(
     fontSize: Ds.section,
     fontWeight: FontWeight.w600,
     height: 1.2,

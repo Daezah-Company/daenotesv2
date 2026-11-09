@@ -15,4 +15,18 @@
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
+    <style name="QuickCaptureTheme" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:colorAccent">#FFFFFFFF</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@style/DaeNotesCaptureWindowAnimation</item>
+        <item name="android:windowMinWidthMajor">92%</item>
+        <item name="android:windowMinWidthMinor">92%</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:windowSoftInputMode">stateAlwaysVisible|adjustResize</item>
+    </style>
+    <style name="DaeNotesCaptureWindowAnimation">
+        <item name="android:windowEnterAnimation">@anim/daenotes_capture_enter</item>
+        <item name="android:windowExitAnimation">@anim/daenotes_capture_exit</item>
+    </style>
 </resources>

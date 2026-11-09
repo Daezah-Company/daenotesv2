@@ -6,8 +6,8 @@ import 'ds_tokens.dart';
 import 'ds_typography.dart';
 
 /// Mono uppercase tracked label used for eyebrows: the wordmark row, section
-/// kickers, field labels. Chrome colour by default; [accent] may only be one
-/// of the thread/status colours (colour = relation or status, nothing else).
+/// kickers, field labels. Uses the monochrome type scale by default; [accent]
+/// remains for compatibility but app screens use only ink/paper roles.
 class DsEyebrow extends StatelessWidget {
   const DsEyebrow(this.text, {super.key, this.accent, this.size = Ds.caption});
 
@@ -28,8 +28,7 @@ class DsEyebrow extends StatelessWidget {
   }
 }
 
-/// Small NOTE / TODO marker. Type marks are one of the three sanctioned
-/// places colour may appear (contract section 5).
+/// Small NOTE / TODO marker, rendered with monochrome contrast.
 class DsTypeMark extends StatelessWidget {
   const DsTypeMark(this.type, {super.key, this.filled = false});
 
@@ -41,7 +40,7 @@ class DsTypeMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dae = context.dae;
-    final color = DaeTypeMarks.forType(type);
+    final color = dae.onSurface;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: filled ? color : null,

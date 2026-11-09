@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/ds.dart';
 import '../../../data/model/enums.dart';
 
-/// A bichrome segmented control — the DS answer to Material chips/segmented
-/// buttons. Chrome stays ink/paper; only the selected tab is marked.
+/// A clear, square segmented control for the home filters. The active surface
+/// travels as one piece, which makes the selection easy to spot at a glance.
 class DsFilterControl extends StatelessWidget {
   const DsFilterControl({
     super.key,
@@ -20,22 +20,89 @@ class DsFilterControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dae = context.dae;
-    return Row(
-      children: [
-        for (var i = 0; i < options.length; i++)
-          Padding(
-            padding: EdgeInsets.only(right: Ds.s4),
-            child: _Segment(
-              label: options[i],
-              active: i == currentIndex,
-              onTap: () => onChanged(i),
-              activeColor: dae.onSurface,
-              idleColor: dae.onSurfaceSecondary,
+    return SizedBox(
+      height: 44,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final slot = constraints.maxWidth / options.length;
+          final reduced = context.reduceMotion;
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              color: dae.elevated,
+              borderRadius: BorderRadius.circular(Ds.radius),
             ),
-          ),
-      ],
+            child: Stack(
+              children: [
+                if (reduced)
+                  Positioned(
+                    left: slot * currentIndex + 3,
+                    top: 3,
+                    bottom: 3,
+                    width: slot - 6,
+                    child: const _FilterSelection(),
+                  )
+                else
+                  Positioned.fill(
+                    child: Padding(
+                      padding: const EdgeInsets.all(3),
+                      child: LayoutBuilder(
+                        builder: (context, inner) =>
+                            TweenAnimationBuilder<double>(
+                              tween: Tween<double>(
+                                begin: currentIndex.toDouble(),
+                                end: currentIndex.toDouble(),
+                              ),
+                              duration: DsMotion.standard,
+                              curve: DsMotion.enter,
+                              builder: (context, index, child) => Align(
+                                alignment: Alignment.centerLeft,
+                                child: Transform.translate(
+                                  offset: Offset(slot * index, 0),
+                                  child: SizedBox(
+                                    width: slot - 6,
+                                    height: inner.maxHeight,
+                                    child: child,
+                                  ),
+                                ),
+                              ),
+                              child: const _FilterSelection(),
+                            ),
+                      ),
+                    ),
+                  ),
+                Row(
+                  children: [
+                    for (var i = 0; i < options.length; i++)
+                      Expanded(
+                        child: _Segment(
+                          label: options[i],
+                          active: i == currentIndex,
+                          onTap: () => onChanged(i),
+                          activeColor: dae.background,
+                          idleColor: dae.onSurfaceSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
+}
+
+class _FilterSelection extends StatelessWidget {
+  const _FilterSelection();
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: context.dae.onSurface,
+      borderRadius: BorderRadius.circular(Ds.radiusSm),
+    ),
+  );
 }
 
 class _Segment extends StatelessWidget {
@@ -56,32 +123,28 @@ class _Segment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DsPressable(
-      pressScale: 0.94,
+      pressScale: 0.98,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: IntrinsicWidth(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AnimatedDefaultTextStyle(
-                duration: DsMotion.standard,
+        child: Semantics(
+          button: true,
+          selected: active,
+          label: label,
+          child: SizedBox.expand(
+            child: Center(
+              child: AnimatedDefaultTextStyle(
+                duration: context.reduceMotion
+                    ? Duration.zero
+                    : DsMotion.standard,
                 curve: DsMotion.onScreen,
-                style: DsType.eyebrow(
+                style: DsType.body(
                   color: active ? activeColor : idleColor,
                   weight: active ? FontWeight.w600 : FontWeight.w500,
                 ),
-                child: Text(label.toUpperCase()),
+                child: Text(label),
               ),
-              const SizedBox(height: 5),
-              AnimatedContainer(
-                duration: DsMotion.standard,
-                curve: DsMotion.onScreen,
-                height: 2,
-                color: active ? activeColor : Colors.transparent,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -90,7 +153,7 @@ class _Segment extends StatelessWidget {
 }
 
 /// Todo completion mark. A custom circle + check (not a Material Checkbox) so
-/// it stays bichrome; `done` reads as filled status.
+/// it stays monochrome; `done` reads as filled status.
 class DsCheckToggle extends StatelessWidget {
   const DsCheckToggle({
     super.key,
@@ -158,7 +221,7 @@ class DsCheckToggle extends StatelessWidget {
   }
 }
 
-/// Priority selection as three bichrome options; the marked one is a status.
+/// Priority selection as three monochrome options; the marked one is a status.
 class DsPriorityPicker extends StatelessWidget {
   const DsPriorityPicker({
     super.key,

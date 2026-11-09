@@ -4,12 +4,15 @@ import 'package:go_router/go_router.dart';
 
 import 'app_shell.dart';
 import 'core/ds.dart';
+import 'core/dae_loader.dart';
 import 'data/providers.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/graph/graph_screen.dart';
+import 'features/notes/archive_screen.dart';
 import 'features/notes/dae_inbox.dart';
 import 'features/notes/note_editor.dart';
 import 'features/reminders/reminders_screen.dart';
+import 'features/settings/settings_screen.dart';
 import 'features/todos/todo_editor.dart';
 
 /// Canonical route names. Feature agents register subroutes against these —
@@ -22,6 +25,8 @@ abstract final class DaeRouteNames {
   static const todoDetail = 'todoDetail';
   static const login = 'login';
   static const register = 'register';
+  static const archive = 'archive';
+  static const sessionCheck = 'sessionCheck';
 
   static String notePath(String uuid) => '/note/$uuid';
   static String todoPath(String uuid) => '/todo/$uuid';
@@ -39,12 +44,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final loc = state.matchedLocation;
       final onAuthScreen = loc == '/login' || loc == '/register';
-      if (deciding) return null; // stay put while the session is rehydrated
+      if (deciding) {
+        // Keep the credential form visible while a user submits it. At app
+        // startup (or logout), hold protected pages behind a real session
+        // gate instead of briefly mounting the dashboard and its sync engine.
+        if (onAuthScreen || loc == '/session-check') return null;
+        return '/session-check?from=${Uri.encodeComponent(state.uri.toString())}';
+      }
       if (!signedIn && !onAuthScreen) return '/login';
       if (signedIn && onAuthScreen) return '/inbox';
+      if (loc == '/session-check') {
+        final destination = _safeDestination(state.uri.queryParameters['from']);
+        return signedIn ? destination ?? '/inbox' : '/login';
+      }
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/session-check',
+        name: DaeRouteNames.sessionCheck,
+        builder: (context, state) => const _SessionCheckScreen(),
+      ),
       GoRoute(
         path: '/login',
         name: DaeRouteNames.login,
@@ -64,7 +84,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/inbox',
                 name: DaeRouteNames.inbox,
-                builder: (context, state) => const DaeInboxScreen(),
+                builder: (context, state) => DaeInboxScreen(
+                  capture: state.uri.queryParameters['capture'],
+                ),
+              ),
+              GoRoute(
+                path: '/settings',
+                name: 'settings',
+                builder: (context, state) => const SettingsScreen(),
               ),
             ],
           ),
@@ -96,6 +123,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/archive',
+        name: DaeRouteNames.archive,
+        pageBuilder: (context, state) => _daePage(state, const ArchiveScreen()),
       ),
       GoRoute(
         path: '/note/:uuid',
@@ -137,4 +169,54 @@ CustomTransitionPage<void> _daePage(GoRouterState state, Widget child) {
           child: child,
         ),
   );
+}
+
+String? _safeDestination(String? value) {
+  if (value == null || !value.startsWith('/') || value.startsWith('//')) {
+    return null;
+  }
+  final uri = Uri.tryParse(value);
+  if (uri == null ||
+      uri.path == '/login' ||
+      uri.path == '/register' ||
+      uri.path == '/session-check') {
+    return null;
+  }
+  return uri.toString();
+}
+
+class _SessionCheckScreen extends StatelessWidget {
+  const _SessionCheckScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final dae = context.dae;
+    return Scaffold(
+      backgroundColor: dae.background,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox.square(
+              dimension: 68,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  DaeLoader(
+                    size: 68,
+                    strokeWidth: 2,
+                    color: dae.onSurface,
+                  ),
+                  const DaeMark(size: 44),
+                ],
+              ),
+            ),
+            const SizedBox(height: Ds.s4),
+            const SizedBox(height: Ds.s3),
+            DsText.caption('MEMERIKSA SESI'),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -15,6 +15,7 @@ class UpdateTodoRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
+            'group_name' => ['nullable', 'string', 'max:80'],
             'notes' => ['nullable', 'string'],
             'done' => ['sometimes', 'boolean'],
             'priority' => ['sometimes', 'in:low,normal,high'],

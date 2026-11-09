@@ -406,7 +406,7 @@ class GraphCanvasState extends ConsumerState<GraphCanvas>
     return Stack(
       fit: StackFit.expand,
       children: [
-        CustomPaint(painter: painter),
+        RepaintBoundary(child: CustomPaint(painter: painter)),
         Listener(
           behavior: HitTestBehavior.opaque,
           onPointerDown: _onPointerDown,
@@ -536,8 +536,8 @@ class _SemanticsLayer extends StatelessWidget {
   }
 }
 
-/// The bichrome inspector for the selected node: its immediate neighbours,
-/// each row wearing the same ThreadRail colour the list spine uses. This is
+/// The monochrome inspector for the selected node: its immediate neighbours,
+/// each row wearing the same relation rail as the list spine. This is
 /// the "surface its neighbours" half of tap-to-select.
 class _SelectionPanel extends StatelessWidget {
   const _SelectionPanel({required this.state, required this.selected});

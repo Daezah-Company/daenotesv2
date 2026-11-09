@@ -55,6 +55,10 @@ class TodoController extends Controller
 
         if ($existing = Todo::findByUuid($data['uuid'], withTrashed: true)) {
             if ($existing->trashed()) {
+                abort_unless(
+                    (int) $existing->user_id === (int) $request->user()->id,
+                    404,
+                );
                 $existing->fill($data)->restore();
                 $existing->forceFill(['synced_at' => now()])->save();
 
@@ -75,6 +79,7 @@ class TodoController extends Controller
     public function update(UpdateTodoRequest $request, string $uuid): TodoResource
     {
         $todo = $this->findOwned(Todo::class, $uuid);
+        $this->assertCanEditSharedItem($todo);
         $data = Timestamp::forModel(Todo::class, $request->validated());
 
         if (array_key_exists('done', $data)) {
@@ -89,6 +94,7 @@ class TodoController extends Controller
     public function toggle(string $uuid): TodoResource
     {
         $todo = $this->findOwned(Todo::class, $uuid);
+        $this->assertCanEditSharedItem($todo);
         $done = ! $todo->done;
 
         $todo->forceFill([
@@ -102,7 +108,7 @@ class TodoController extends Controller
 
     public function destroy(string $uuid): JsonResponse
     {
-        $todo = $this->findOwned(Todo::class, $uuid);
+        $todo = $this->findOwnedForDelete(Todo::class, $uuid);
         $todo->delete();
 
         return response()->json([

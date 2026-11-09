@@ -5,11 +5,7 @@ import 'ds_theme.dart';
 import 'ds_tokens.dart';
 import 'ds_typography.dart';
 
-/// The DaeNotes tab strip: mono uppercase labels with an underline for the
-/// active tab — per contract, a tab underline, not Material tabs.
-///
-/// The underline is one bar that *slides* to the chosen tab (rather than
-/// fading in and out per tab), so switching tabs keeps spatial continuity.
+/// A compact Swiss-style navigation rail with a crisp sliding selection.
 class DsTabBar extends StatelessWidget {
   const DsTabBar({
     super.key,
@@ -29,55 +25,82 @@ class DsTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dae = context.dae;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: dae.background,
-        border: Border(
-          top: BorderSide(color: dae.hairline.withValues(alpha: 0.28)),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Ds.s5, Ds.s2, Ds.s5, Ds.s2),
         child: SizedBox(
-          height: 52,
+          height: 58,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final slot = constraints.maxWidth / labels.length;
               final reduced = context.reduceMotion;
-              return Stack(
-                children: [
-                  Row(
-                    children: [
-                      for (var i = 0; i < labels.length; i++)
-                        Expanded(
-                          child: _Tab(
-                            label: labels[i],
-                            icon: icons != null && i < icons!.length
-                                ? icons![i]
-                                : null,
-                            active: i == currentIndex,
-                            onTap: () => onChanged(i),
+              return DecoratedBox(
+                decoration: BoxDecoration(
+                  color: dae.elevated,
+                  borderRadius: BorderRadius.circular(Ds.radius),
+                  border: Border.all(
+                    color: dae.hairline.withValues(alpha: 0.12),
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    if (reduced)
+                      Positioned(
+                        left: slot * currentIndex + 4,
+                        top: 4,
+                        bottom: 4,
+                        width: slot - 8,
+                        child: const _ActiveTabSurface(),
+                      )
+                    else
+                      Positioned.fill(
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: LayoutBuilder(
+                            builder: (context, inner) =>
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween<double>(
+                                    begin: currentIndex.toDouble(),
+                                    end: currentIndex.toDouble(),
+                                  ),
+                                  duration: DsMotion.panel,
+                                  curve: DsMotion.enter,
+                                  builder: (context, index, child) => Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Transform.translate(
+                                      offset: Offset(slot * index, 0),
+                                      child: SizedBox(
+                                        width: slot - 8,
+                                        height: inner.maxHeight,
+                                        child: child,
+                                      ),
+                                    ),
+                                  ),
+                                  child: const _ActiveTabSurface(),
+                                ),
                           ),
                         ),
-                    ],
-                  ),
-                  if (!reduced)
-                    AnimatedPositioned(
-                      duration: DsMotion.panel,
-                      curve: DsMotion.enter,
-                      left: slot * currentIndex,
-                      bottom: 0,
-                      width: slot,
-                      child: const _TabUnderline(),
-                    )
-                  else
-                    Positioned(
-                      left: slot * currentIndex,
-                      bottom: 0,
-                      width: slot,
-                      child: const _TabUnderline(),
+                      ),
+                    Row(
+                      children: [
+                        for (var i = 0; i < labels.length; i++)
+                          Expanded(
+                            child: _Tab(
+                              label: labels[i],
+                              icon: icons != null && i < icons!.length
+                                  ? icons![i]
+                                  : null,
+                              active: i == currentIndex,
+                              activeColor: dae.background,
+                              inactiveColor: dae.onSurfaceSecondary,
+                              onTap: () => onChanged(i),
+                            ),
+                          ),
+                      ],
                     ),
-                ],
+                  ],
+                ),
               );
             },
           ),
@@ -87,59 +110,86 @@ class DsTabBar extends StatelessWidget {
   }
 }
 
-/// The travelling bar: inset so it reads as an accent under the label, not a
-/// full-width divider.
-class _TabUnderline extends StatelessWidget {
-  const _TabUnderline();
+class _ActiveTabSurface extends StatelessWidget {
+  const _ActiveTabSurface();
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Ds.s4),
-      child: SizedBox(
-        height: 2,
-        child: ColoredBox(color: context.dae.onSurface),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => DecoratedBox(
+    key: const ValueKey('activeTabSurface'),
+    decoration: BoxDecoration(
+      color: context.dae.onSurface,
+      borderRadius: BorderRadius.circular(Ds.radiusSm),
+    ),
+  );
 }
 
 class _Tab extends StatelessWidget {
   const _Tab({
     required this.label,
     required this.active,
+    required this.activeColor,
+    required this.inactiveColor,
     required this.onTap,
     this.icon,
   });
 
   final String label;
   final bool active;
+  final Color activeColor;
+  final Color inactiveColor;
   final VoidCallback onTap;
   final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
-    final dae = context.dae;
-    final color = active ? dae.onSurface : dae.onSurfaceSecondary;
-    return DsPressable(
-      pressScale: 0.94,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (icon != null) Icon(icon, size: 16, color: color),
-            AnimatedDefaultTextStyle(
-              duration: DsMotion.standard,
-              curve: DsMotion.onScreen,
-              style: DsType.eyebrow(
-                color: color,
-                weight: active ? FontWeight.w600 : FontWeight.w500,
+    final color = active ? activeColor : inactiveColor;
+    return Semantics(
+      button: true,
+      selected: active,
+      label: label,
+      child: DsPressable(
+        pressScale: 0.96,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: SizedBox.expand(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    AnimatedScale(
+                      scale: active ? 1 : 0.92,
+                      duration: context.reduceMotion
+                          ? Duration.zero
+                          : DsMotion.standard,
+                      curve: DsMotion.enter,
+                      child: Icon(icon, size: 18, color: color),
+                    ),
+                    const SizedBox(height: 2),
+                  ],
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: AnimatedDefaultTextStyle(
+                        duration: context.reduceMotion
+                            ? Duration.zero
+                            : DsMotion.standard,
+                        curve: DsMotion.onScreen,
+                        style: DsType.eyebrow(
+                          color: color,
+                          weight: active ? FontWeight.w700 : FontWeight.w500,
+                          size: 10,
+                        ),
+                        child: Text(label.toUpperCase(), maxLines: 1),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              child: Text(label.toUpperCase()),
             ),
-          ],
+          ),
         ),
       ),
     );

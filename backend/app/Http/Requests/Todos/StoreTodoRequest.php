@@ -16,6 +16,7 @@ class StoreTodoRequest extends FormRequest
         return [
             'uuid' => ['required', 'string', 'max:36'],
             'title' => ['required', 'string', 'max:255'],
+            'group_name' => ['nullable', 'string', 'max:80'],
             'notes' => ['nullable', 'string'],
             'priority' => ['sometimes', 'in:low,normal,high'],
             'due_at' => ['nullable', 'date'],

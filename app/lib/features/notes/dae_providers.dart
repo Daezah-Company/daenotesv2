@@ -20,6 +20,16 @@ final todosListProvider = StreamProvider<List<Todo>>(
   (ref) => ref.watch(todosRepositoryProvider).watchTodos(),
 );
 
+/// Archived records are kept in the same local store so they remain available
+/// offline and can be restored without a round trip to the server.
+final archivedNotesProvider = StreamProvider<List<Note>>(
+  (ref) => ref.watch(notesRepositoryProvider).watchNotes(archivedOnly: true),
+);
+
+final archivedTodosProvider = StreamProvider<List<Todo>>(
+  (ref) => ref.watch(todosRepositoryProvider).watchTodos(archivedOnly: true),
+);
+
 /// The thread colour carried by an item's spine rail: its first live
 /// connection, or null when isolated. Drives the inbox incentive.
 final threadForProvider = StreamProvider.family<Color?, DaeItemRef>(

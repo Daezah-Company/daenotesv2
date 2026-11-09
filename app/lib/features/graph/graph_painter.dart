@@ -8,8 +8,8 @@ import 'graph_measure.dart';
 import 'graph_physics.dart';
 import 'graph_view.dart';
 
-/// Bichrome palette for the canvas chrome (contract §5): the only colour on
-/// this surface is the thread palette and the sanctioned status/tone marks.
+/// Monochrome palette for the graph canvas. Relation types affect structure,
+/// while contrast comes from the active theme.
 @immutable
 class GraphPalette {
   const GraphPalette({
@@ -33,7 +33,7 @@ class GraphPalette {
   factory GraphPalette.of(DaeTokens t) => GraphPalette(
     isDark: t.isDark,
     canvas: t.background,
-    nodeFill: t.isDark ? Ds.inkLift : Ds.paperVeil.withValues(alpha: 0.12),
+    nodeFill: t.surface,
     onNode: t.onSurface,
     onNodeSecondary: t.onSurfaceSecondary,
     hairline: t.hairline,
@@ -163,7 +163,7 @@ class GraphCanvasPainter extends CustomPainter {
           selected != null &&
           (e.sourceUuid == selected || e.targetUuid == selected);
       final paint = Paint()
-        ..color = e.threadColor.withValues(
+        ..color = palette.onNode.withValues(
           alpha: selected == null
               ? 0.9
               : touchesSelected
@@ -175,7 +175,27 @@ class GraphCanvasPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round;
 
       canvas.drawPath(_trimmedThread(p0, ctrl, p1, progress), paint);
+      if (revealActive && progress < 1) {
+        final tip = _quadraticPoint(p0, ctrl, p1, progress);
+        // A restrained moving ink tip makes the reveal feel drawn by hand;
+        // it disappears as soon as the thread lands on its destination.
+        canvas.drawCircle(
+          tip,
+          4.2,
+          Paint()..color = palette.onNode.withValues(alpha: 0.14),
+        );
+        canvas.drawCircle(
+          tip,
+          1.8,
+          Paint()..color = palette.onNode.withValues(alpha: 0.9),
+        );
+      }
     }
+  }
+
+  Offset _quadraticPoint(Offset p0, Offset ctrl, Offset p1, double t) {
+    final inverse = 1 - t;
+    return p0 * (inverse * inverse) + ctrl * (2 * inverse * t) + p1 * (t * t);
   }
 
   /// Deterministic curvature side per edge so reversed threads between the

@@ -15,26 +15,59 @@ class AuthRepository {
   final TokenStorage _tokens;
 
   /// Rehydrate a stored session on app start. No network required — a stale
-  /// token gets bounced to login by the 401 interceptor on first call.
+  /// token used to be trusted here until the first background request. That
+  /// made the inbox flash before the interceptor sent the user back to login.
+  /// Validate it before the router exposes authenticated routes. If the API is
+  /// unreachable, keep a complete cached session so offline use still works.
   Future<AuthSession?> restore() async {
     final token = await _tokens.readToken();
     if (token == null || token.isEmpty) return null;
     final userJson = await _tokens.readUser();
-    if (userJson == null) {
-      return AuthSession(token: token, userId: 0, name: '', email: '');
-    }
+    AuthSession? cached;
     try {
-      final session = AuthSession.fromJson(
-        jsonDecode(userJson) as Map<String, dynamic>,
-      );
-      return AuthSession(
+      if (userJson != null) {
+        final session = AuthSession.fromJson(
+          jsonDecode(userJson) as Map<String, dynamic>,
+        );
+        if (session.userId > 0 && session.email.isNotEmpty) {
+          cached = AuthSession(
+            token: token,
+            userId: session.userId,
+            name: session.name,
+            email: session.email,
+          );
+        }
+      }
+    } on Object {
+      // A malformed cached profile must not be treated as a valid identity.
+    }
+
+    try {
+      final user = await _api.me();
+      final session = AuthSession(
         token: token,
-        userId: session.userId,
-        name: session.name,
-        email: session.email,
+        userId: (user['id'] as num?)?.toInt() ?? 0,
+        name: user['name'] as String? ?? '',
+        email: user['email'] as String? ?? '',
       );
+      if (session.userId <= 0 || session.email.isEmpty) {
+        throw const FormatException('Invalid user session response.');
+      }
+      await _bindLegacyDatabase(session);
+      await _tokens.writeUser(jsonEncode(session.toJson()));
+      return session;
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401) {
+        await _tokens.clear();
+        return null;
+      }
+      // Keep the user in the app during an outage; the cached bearer token
+      // will be checked again by the next authenticated request.
+      return _offlineSession(token, cached);
     } on FormatException {
-      return AuthSession(token: token, userId: 0, name: '', email: '');
+      return _offlineSession(token, cached);
+    } on Object {
+      return _offlineSession(token, cached);
     }
   }
 
@@ -71,9 +104,39 @@ class AuthRepository {
   }
 
   Future<AuthSession> _persist(AuthSession session) async {
-    await _tokens.writeToken(session.token);
+    await _bindLegacyDatabase(session);
+    // Write the profile first. The token is the session commit marker, so a
+    // process death cannot leave a bearer token paired with an absent profile.
     await _tokens.writeUser(jsonEncode(session.toJson()));
+    await _tokens.writeToken(session.token);
     return session;
+  }
+
+  Future<AuthSession?> _offlineSession(
+    String token,
+    AuthSession? cached,
+  ) async {
+    // A token without a complete cached identity can happen after an old or
+    // interrupted upgrade. Do not expose protected routes with userId=0: the
+    // first sync request would then fail and send the user straight back out.
+    if (cached == null) return null;
+    final session = AuthSession(
+      token: token,
+      userId: cached.userId,
+      name: cached.name,
+      email: cached.email,
+    );
+    await _bindLegacyDatabase(session);
+    return session;
+  }
+
+  Future<void> _bindLegacyDatabase(AuthSession session) async {
+    if (session.userId <= 0) return;
+    try {
+      await _tokens.bindLegacyDatabaseOwner(session.userId);
+    } on Object {
+      // A storage failure must not turn a valid API login into an auth error.
+    }
   }
 
   /// Wire error message out of a DioException-shaped error.

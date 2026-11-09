@@ -15,6 +15,7 @@ class UpdateNoteRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
+            'group_name' => ['nullable', 'string', 'max:80'],
             'body' => ['required', 'string'],
             'color' => ['nullable', 'string', 'max:32'],
             'pinned' => ['sometimes', 'boolean'],

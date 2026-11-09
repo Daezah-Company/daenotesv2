@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'ds_tokens.dart';
 import 'ds_typography.dart';
 
-/// Semantic chrome roles derived from the bichrome tokens. Dark is the
+/// Semantic chrome roles derived from the monochrome tokens. Dark is the
 /// product default; light swaps the same tokens (contract section 5).
 @immutable
 class DaeTokens extends ThemeExtension<DaeTokens> {
@@ -20,37 +20,35 @@ class DaeTokens extends ThemeExtension<DaeTokens> {
 
   final bool isDark;
 
-  /// Deepest canvas: inkDeep in dark, paper in light.
+  /// Canvas: graphite in dark mode, white in light mode.
   final Color background;
 
   /// Normal chrome surface: ink in dark, paper in light.
   final Color surface;
 
-  /// Raised card: inkLift in dark, paper in light.
+  /// Panels share the surface; Swiss hierarchy comes from rules and spacing.
   final Color elevated;
 
   /// Primary text: paper in dark, ink in light.
   final Color onSurface;
 
-  /// Secondary text: the veil tuned for whichever surface it sits on, because
-  /// one grey cannot clear AA on both #282828 and #FFFFFF.
+  /// Secondary text: alpha blend of the opposite monochrome value.
   final Color onSurfaceSecondary;
 
-  /// Hairline tint. Every consumer multiplies it by an alpha of 0.12–0.4, so
-  /// light mode must tint with `ink` (a grey hairline on white disappears).
+  /// Hairline tint, blended with alpha where it is painted.
   final Color hairline;
 
-  /// Text drawn on top of a coloured thread/status accent.
+  /// Text drawn on the inverted selection surface.
   final Color onAccent;
 
   static const DaeTokens dark = DaeTokens(
     isDark: true,
-    background: Ds.inkDeep,
+    background: Ds.ink,
     surface: Ds.ink,
     elevated: Ds.inkLift,
     onSurface: Ds.paper,
     onSurfaceSecondary: Ds.veilOnInk,
-    hairline: Ds.paperVeil,
+    hairline: Ds.paper,
     onAccent: Ds.ink,
   );
 
@@ -90,7 +88,7 @@ class DaeTokens extends ThemeExtension<DaeTokens> {
   DaeTokens lerp(covariant DaeTokens? other, double t) => other ?? this;
 }
 
-/// ThemeData built strictly from [Ds] tokens (contract section 6: no ad-hoc
+/// ThemeData built strictly from [Ds] tokens (design contract section 6: no ad-hoc
 /// ThemeData in widgets). Dark-first.
 abstract final class DsTheme {
   static ThemeData dark() => _build(DaeTokens.dark);
@@ -102,10 +100,10 @@ abstract final class DsTheme {
       brightness: t.isDark ? Brightness.dark : Brightness.light,
       primary: t.onSurface,
       onPrimary: t.background,
-      secondary: Ds.threadSlate,
-      onSecondary: Ds.ink,
-      error: Ds.threadRose,
-      onError: Ds.paper,
+      secondary: t.onSurface,
+      onSecondary: t.background,
+      error: t.onSurface,
+      onError: t.background,
       surface: t.surface,
       onSurface: t.onSurface,
     );
@@ -116,7 +114,7 @@ abstract final class DsTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: t.background,
       canvasColor: t.background,
-      splashFactory: InkSparkle.splashFactory,
+      splashFactory: InkRipple.splashFactory,
     );
 
     return base.copyWith(

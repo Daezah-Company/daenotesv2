@@ -27,8 +27,7 @@ class GraphNodeMeasurer {
 
   final double textScale;
 
-  /// Bichrome label tones resolved once from the theme (colour is reserved
-  /// for threads/type marks/status — node text never carries it).
+  /// Monochrome label tones resolved once from the theme.
   final Color primaryColor;
   final Color secondaryColor;
 

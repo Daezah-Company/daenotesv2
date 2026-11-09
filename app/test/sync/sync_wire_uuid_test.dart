@@ -381,6 +381,38 @@ void main() {
         expect(await db.select(db.links).get(), hasLength(1));
       },
     );
+
+    test(
+      'read-only rejection restores the server row and clears local write',
+      () async {
+        final uuid = await notes.create(title: 'local unauthorized edit');
+        transport.pushHandler = (_) => SyncPushResult(
+          accepted: const [],
+          conflicts: const [],
+          readOnly: [
+            SyncConflict(
+              table: 'note',
+              uuid: uuid,
+              serverRow: {
+                'uuid': uuid,
+                'owner_user_id': 41,
+                'title': 'owner canonical value',
+                'body': 'owner body',
+                'updated_at': '2026-06-01T09:00:00Z',
+              },
+            ),
+          ],
+        );
+
+        await engine.syncOnce();
+
+        expect(await outbox.all(), isEmpty);
+        final row = await notes.byUuid(uuid);
+        expect(row?.title, 'owner canonical value');
+        expect(row?.ownerUserId, 41);
+        expect(row?.deletedAt, isNull);
+      },
+    );
   });
 
   group('ApiSyncTransport against the real response shape', () {

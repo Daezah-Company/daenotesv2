@@ -43,7 +43,13 @@ final authControllerProvider =
     AsyncNotifierProvider<AuthController, AuthSession?>(AuthController.new);
 
 final databaseProvider = Provider<AppDatabase>((ref) {
-  final db = AppDatabase.open();
+  final session = ref.watch(authControllerProvider).asData?.value;
+  final tokens = ref.watch(tokenStorageProvider);
+  final name = AppDatabase.databaseNameForAccount(
+    userId: session?.userId,
+    legacyOwnerId: tokens.legacyDatabaseOwnerId,
+  );
+  final db = AppDatabase.open(name: name);
   ref.onDispose(db.close);
   return db;
 });

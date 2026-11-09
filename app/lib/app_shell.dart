@@ -30,6 +30,11 @@ class AppShell extends ConsumerWidget {
           Expanded(child: navigationShell),
           DsTabBar(
             labels: _tabs,
+            icons: const [
+              Icons.space_dashboard_rounded,
+              Icons.hub_rounded,
+              Icons.notifications_none_rounded,
+            ],
             currentIndex: navigationShell.currentIndex,
             onChanged: (index) => navigationShell.goBranch(
               index,
@@ -62,10 +67,17 @@ class _ShellHeader extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Wordmark: mono eyebrow + Bricolage name, per the layout sketch.
-            const DsEyebrow('DaeNotes'),
+            const DaeMark(size: 32),
+            const SizedBox(width: Ds.s2),
+            DsText.bodyStrong('DaeNotes'),
             const Spacer(),
             _SyncDot(pendingCount: pendingCount, phase: phase),
+            IconButton(
+              tooltip: 'Pengaturan',
+              visualDensity: VisualDensity.compact,
+              icon: Icon(Icons.tune, color: dae.onSurfaceSecondary),
+              onPressed: () => context.push('/settings'),
+            ),
           ],
         ),
       ),
@@ -83,9 +95,9 @@ class _SyncDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final dae = context.dae;
     final color = switch (phase) {
-      SyncPhase.error => Ds.threadRose,
-      SyncPhase.syncing => Ds.threadSlate,
-      _ when pendingCount > 0 => Ds.threadAmber,
+      SyncPhase.error => dae.onSurface,
+      SyncPhase.syncing => dae.onSurface,
+      _ when pendingCount > 0 => dae.onSurface,
       _ => null,
     };
     return Tooltip(

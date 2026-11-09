@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Local reminders (contract §7): posting, firing after a reboot, and
          exact timing. Exact alarms are requested in-app and fall back to
          inexact delivery when the user declines. -->
@@ -8,7 +9,13 @@
     <application
         android:label="DaeNotes"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher">
+        <!-- Keep the notification small icon in release resources: the plugin
+             resolves this drawable by name at runtime. -->
+        <meta-data
+            android:name="com.daengzah.daenotes.notification_icon"
+            android:resource="@drawable/daenotes_notification" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -30,7 +37,43 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="daenotes" />
+            </intent-filter>
         </activity>
+        <activity
+            android:name=".QuickCaptureActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/QuickCaptureTheme" />
+        <receiver
+            android:name=".DaeNotesWidgetProvider"
+            android:exported="true"
+            android:label="DaeNotes">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/daenotes_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".DaeNotesOverviewWidgetProvider"
+            android:exported="true"
+            android:label="DaeNotes Terdekat">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/daenotes_overview_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".DaeNotesTodoToggleReceiver"
+            android:exported="false" />
         <!-- flutter_local_notifications delivers the scheduled reminders and
              re-arms them after a reboot. -->
         <receiver

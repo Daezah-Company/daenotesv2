@@ -17,13 +17,12 @@ enum DaeItemType {
   }
 }
 
-/// Which coloured thread a connection between two items carries.
-/// Contract section 5: colour appears only on connection threads, type marks
-/// and status — never on chrome.
+/// Semantic relation role for a connection between two items. Rendering is
+/// monochrome; item type remains available for semantics and graph behavior.
 ///
-/// - note <-> note  -> amber
-/// - note <-> todo  -> moss
-/// - todo <-> todo  -> slate
+/// - note <-> note
+/// - note <-> todo
+/// - todo <-> todo
 DaeThread daeThreadBetween(DaeItemType source, DaeItemType target) {
   if (source == DaeItemType.note && target == DaeItemType.note) {
     return DaeThread.noteToNote;
@@ -36,13 +35,12 @@ DaeThread daeThreadBetween(DaeItemType source, DaeItemType target) {
 
 enum DaeThread { noteToNote, noteToTodo, todoToTodo, reminder }
 
-/// Type mark colour for the NOTE / TODO chips (contract: type marks may carry
-/// colour; note reads amber, todo reads slate, reminder/status reads rose).
-/// Kept in a plain function so the core layer stays dependency-free.
+/// Monochrome role colors for NOTE / TODO chips. Kept dependency-free; the
+/// widgets resolve contrast from the active theme.
 abstract final class DaeTypeMarks {
-  static const noteColor = Color(0xFFE3B23C); // threadAmber
-  static const todoColor = Color(0xFF7FA0C8); // threadSlate
-  static const reminderColor = Color(0xFFC9768F); // threadRose
+  static const noteColor = Color(0xFF282828);
+  static const todoColor = Color(0xFF282828);
+  static const reminderColor = Color(0xFF282828);
 
   static Color forType(DaeItemType type) =>
       type == DaeItemType.note ? noteColor : todoColor;

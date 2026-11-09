@@ -12,9 +12,12 @@ part 'database.g.dart';
 class Notes extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get uuid => text().unique()();
+  IntColumn get ownerUserId => integer().nullable()();
+  BoolColumn get canEdit => boolean().withDefault(const Constant(true))();
   TextColumn get title => text().withDefault(const Constant(''))();
   TextColumn get body => text().withDefault(const Constant(''))();
   TextColumn get color => text().nullable()();
+  TextColumn get groupName => text().nullable()();
   BoolColumn get pinned => boolean().withDefault(const Constant(false))();
   DateTimeColumn get archivedAt => dateTime().nullable()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -25,8 +28,11 @@ class Notes extends Table {
 class Todos extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get uuid => text().unique()();
+  IntColumn get ownerUserId => integer().nullable()();
+  BoolColumn get canEdit => boolean().withDefault(const Constant(true))();
   TextColumn get title => text().withDefault(const Constant(''))();
   TextColumn get notes => text().nullable()();
+  TextColumn get groupName => text().nullable()();
   BoolColumn get done => boolean().withDefault(const Constant(false))();
   DateTimeColumn get doneAt => dateTime().nullable()();
   TextColumn get priority => text()
@@ -100,10 +106,51 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.evaluator);
 
   /// Production constructor — file-backed via drift_flutter.
-  AppDatabase.open() : super(driftDatabase(name: 'daenotes'));
+  AppDatabase.open({String? name})
+    : super(driftDatabase(name: name ?? 'daenotes'));
+
+  /// Use the pre-account database for its original account and a private
+  /// Drift file for every later account on this device. Keeping the legacy
+  /// file intact avoids losing offline data during the account-isolation cut.
+  static String databaseNameForAccount({
+    required int? userId,
+    required int? legacyOwnerId,
+  }) {
+    if (userId == null || userId <= 0 || userId == legacyOwnerId) {
+      return 'daenotes';
+    }
+    return 'daenotes_user_$userId';
+  }
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 4;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) async => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(notes, notes.groupName);
+        await m.addColumn(todos, todos.groupName);
+      }
+      if (from < 3) {
+        await m.addColumn(notes, notes.ownerUserId);
+        await m.addColumn(todos, todos.ownerUserId);
+        // Owner identity is new on the wire. Pull once without an `since`
+        // cursor so existing shared mirrors receive their owner metadata.
+        await (delete(
+          metas,
+        )..where((row) => row.metaKey.equals(MetaKeys.lastSyncedAt))).go();
+      }
+      if (from < 4) {
+        await m.addColumn(notes, notes.canEdit);
+        await m.addColumn(todos, todos.canEdit);
+        await (delete(
+          metas,
+        )..where((row) => row.metaKey.equals(MetaKeys.lastSyncedAt))).go();
+      }
+    },
+  );
 
   /// The server-int columns (`server_id`, `source_id`, `target_id`,
   /// `item_id`) were dropped without a version bump on purpose: every one of

@@ -203,12 +203,18 @@ class GraphSimulation {
     }
     _ticksSinceHeat++;
 
-    final forces = Map<String, Offset>.fromEntries(
-      _bodies.values.map((b) => MapEntry(b.uuid, Offset.zero)),
-    );
+    final list = _bodies.values.toList(growable: false);
+    final indexByUuid = <String, int>{};
+    for (var i = 0; i < list.length; i++) {
+      indexByUuid[list[i].uuid] = i;
+    }
+    // Keep the pairwise hot loop in primitive arrays. Allocating an Offset
+    // and doing two UUID map lookups for every pair creates avoidable garbage
+    // on the UI isolate while the graph is settling.
+    final forceX = List<double>.filled(list.length, 0);
+    final forceY = List<double>.filled(list.length, 0);
 
     // Pairwise repulsion.
-    final list = _bodies.values.toList(growable: false);
     for (var i = 0; i < list.length; i++) {
       final a = list[i];
       for (var j = i + 1; j < list.length; j++) {
@@ -231,16 +237,20 @@ class GraphSimulation {
         final inv = 1 / math.sqrt(d2);
         final fx = dx * inv * f;
         final fy = dy * inv * f;
-        forces[a.uuid] = forces[a.uuid]! + Offset(fx, fy);
-        forces[b.uuid] = forces[b.uuid]! - Offset(fx, fy);
+        forceX[i] += fx;
+        forceY[i] += fy;
+        forceX[j] -= fx;
+        forceY[j] -= fy;
       }
     }
 
     // Spring attraction along edges.
     for (final e in _data.edges) {
-      final a = _bodies[e.sourceUuid];
-      final b = _bodies[e.targetUuid];
-      if (a == null || b == null) continue;
+      final i = indexByUuid[e.sourceUuid];
+      final j = indexByUuid[e.targetUuid];
+      if (i == null || j == null) continue;
+      final a = list[i];
+      final b = list[j];
       var dx = b.position.dx - a.position.dx;
       var dy = b.position.dy - a.position.dy;
       final d2 = dx * dx + dy * dy;
@@ -253,8 +263,10 @@ class GraphSimulation {
       final f = _springK * (d - restLength);
       final fx = dx / d * f;
       final fy = dy / d * f;
-      forces[a.uuid] = forces[a.uuid]! + Offset(fx, fy);
-      forces[b.uuid] = forces[b.uuid]! - Offset(fx, fy);
+      forceX[i] += fx;
+      forceY[i] += fy;
+      forceX[j] -= fx;
+      forceY[j] -= fy;
     }
 
     // Isolated nodes are anchored to a ring outside the connected cloud —
@@ -264,45 +276,61 @@ class GraphSimulation {
 
     // Integrate.
     var moving = 0;
-    for (final b in _bodies.values) {
+    for (var i = 0; i < list.length; i++) {
+      final b = list[i];
       if (b.pinned) {
         b.velocity = Offset.zero;
         continue;
       }
-      var f = forces[b.uuid] ?? Offset.zero;
+      var fx = forceX[i];
+      var fy = forceY[i];
       if (_data.isIsolated(b.uuid)) {
         final a = _hashAngle(b.uuid);
-        final anchor = Offset(
-          anchorRadius * math.cos(a),
-          anchorRadius * math.sin(a),
-        );
-        f += (anchor - b.position) * 0.35;
+        fx += (anchorRadius * math.cos(a) - b.position.dx) * 0.35;
+        fy += (anchorRadius * math.sin(a) - b.position.dy) * 0.35;
       } else {
-        f -= b.position * _gravity;
+        fx -= b.position.dx * _gravity;
+        fy -= b.position.dy * _gravity;
       }
       // Cap the net force, then integrate with damping + velocity clamp.
-      final fMag = f.distance;
-      if (fMag > _maxForce) f = f / fMag * _maxForce;
-      var v = (b.velocity + f) * _damping;
-      final vMag = v.distance;
-      if (vMag > _maxVelocity) v = v / vMag * _maxVelocity;
+      final fMag = math.sqrt(fx * fx + fy * fy);
+      if (fMag > _maxForce) {
+        final scale = _maxForce / fMag;
+        fx *= scale;
+        fy *= scale;
+      }
+      var vx = (b.velocity.dx + fx) * _damping;
+      var vy = (b.velocity.dy + fy) * _damping;
+      final vMag = math.sqrt(vx * vx + vy * vy);
+      if (vMag > _maxVelocity) {
+        final scale = _maxVelocity / vMag;
+        vx *= scale;
+        vy *= scale;
+      }
       // Fruchterman-Reingold-style annealing: a cooling schedule on the
       // velocity guarantees the liquid phase ends — mean energy decays even
       // while forces keep shuffling neighbours, so a dense 250-node graph
       // provably reaches the energy floor before the tick budget runs out.
-      v = v * _cooling;
-      if (!v.isFinite) v = Offset.zero; // never propagate NaN
-      b.velocity = v;
-      var p = b.position + v;
-      if (!p.isFinite) {
-        p = Offset.zero;
+      final cooling = _cooling;
+      vx *= cooling;
+      vy *= cooling;
+      if (!vx.isFinite || !vy.isFinite) {
+        vx = 0;
+        vy = 0;
+      }
+      b.velocity = Offset(vx, vy);
+      var px = b.position.dx + vx;
+      var py = b.position.dy + vy;
+      if (!px.isFinite || !py.isFinite) {
+        px = 0;
+        py = 0;
         b.velocity = Offset.zero;
       }
       b.position = Offset(
-        p.dx.clamp(-100000.0, 100000.0),
-        p.dy.clamp(-100000.0, 100000.0),
+        px.clamp(-100000.0, 100000.0),
+        py.clamp(-100000.0, 100000.0),
       );
-      if (v.distanceSquared > _settleVelocitySq) moving++;
+      if (vx * vx + vy * vy > _settleVelocitySq) moving++;
     }
 
     // Convergence detection.

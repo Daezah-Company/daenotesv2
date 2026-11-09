@@ -89,9 +89,9 @@ class _GroupedList extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(Ds.s4, Ds.s5, Ds.s4, Ds.s2),
             child: DsEyebrow(
               bucketLabel(row.bucket),
-              // Tertunda reads as a status (rose); the rest stay bichrome.
+              // Status stays monochrome; the label carries its meaning.
               accent: row.bucket == ReminderBucket.tertunda
-                  ? Ds.threadRose
+                  ? context.dae.onSurface
                   : null,
             ),
           ),
@@ -131,8 +131,8 @@ class _ReminderRow extends ConsumerWidget {
     final overdue = row.bucket == ReminderBucket.tertunda;
 
     return DsCard(
-      // Rose thread = reminder-bearing item (contract §5).
-      thread: Ds.threadRose,
+      // The rail marks an item that carries a reminder.
+      thread: context.dae.onSurface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -228,7 +228,7 @@ class _ReminderRow extends ConsumerWidget {
         content: DsText.caption('Pengingat dibatalkan'),
         action: SnackBarAction(
           label: 'URUNGKAN',
-          textColor: Ds.threadRose,
+          textColor: dae.onSurface,
           onPressed: () => actions.undoCancel(),
         ),
       ),
@@ -304,7 +304,7 @@ class _EmptyInvitation extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const ThreadRail(thread: Ds.threadRose, width: 4, drawOn: true),
+            ThreadRail(thread: context.dae.onSurface, width: 4, drawOn: true),
             const SizedBox(height: Ds.s4),
             DsText.section('Jadwalkan yang pertama'),
             const SizedBox(height: Ds.s2),

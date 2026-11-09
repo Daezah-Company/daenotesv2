@@ -38,37 +38,36 @@ abstract final class DsMotion {
   static const Duration micro = Duration(milliseconds: 150);
 
   /// Default for state changes and short moves.
-  static const Duration standard = Duration(milliseconds: 240);
+  static const Duration standard = Duration(milliseconds: 180);
 
   /// Panels, sheets, selection surfaces.
-  static const Duration panel = Duration(milliseconds: 320);
+  static const Duration panel = Duration(milliseconds: 240);
 
   /// Route enter (distance-scaled: a whole screen travels further than a row).
-  static const Duration page = Duration(milliseconds: 420);
-  static const Duration pageExit = Duration(milliseconds: 260);
+  static const Duration page = Duration(milliseconds: 300);
+  static const Duration pageExit = Duration(milliseconds: 180);
 
   /// The 3px rail drawing itself down the spine.
-  static const Duration railDraw = Duration(milliseconds: 420);
+  static const Duration railDraw = Duration(milliseconds: 300);
 
   /// Graph signature: threads drawn one after another on first mount.
-  static const Duration canvasReveal = Duration(milliseconds: 1100);
+  static const Duration canvasReveal = Duration(milliseconds: 800);
 
   /// Centring a node on `focus=` — slow enough to read as a camera move.
-  static const Duration focusPan = Duration(milliseconds: 460);
+  static const Duration focusPan = Duration(milliseconds: 320);
 
   // --------------------------------------------------------- choreography
-  /// Micro-cascade step for list rows.
-  static const Duration stagger = Duration(milliseconds: 34);
+  /// Tight entrance rhythm: enough separation to read, short enough to feel immediate.
+  static const Duration stagger = Duration(milliseconds: 22);
 
-  /// Rows past this index share the last delay, keeping the whole entrance
-  /// under half a second — a long list must not feel like a queue.
-  static const int staggerLastRow = 8;
+  /// Only the first rows animate; larger lists stay cheap to paint and scroll.
+  static const int staggerLastRow = 5;
 
   static Duration staggerDelay(int index) =>
       stagger * (index > staggerLastRow ? staggerLastRow : index);
 }
 
-/// Rises (and fades) into place once, when it is first inserted.
+/// Lifts into place once, when it is first inserted.
 ///
 /// Give list rows an [index] to get a staggered cascade for free: the delay is
 /// folded into the animation curve instead of a timer, so nothing can leave a
@@ -93,7 +92,7 @@ class DsEnter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (context.reduceMotion) return child;
+    if (context.reduceMotion || index > DsMotion.staggerLastRow) return child;
     final delay = DsMotion.staggerDelay(index);
     final total = duration + delay;
     return TweenAnimationBuilder<double>(
@@ -106,12 +105,9 @@ class DsEnter extends StatelessWidget {
           1,
           curve: curve,
         ).transform(value);
-        return Opacity(
-          opacity: t,
-          child: Transform.translate(
-            offset: Offset(0, travel * (1 - t)),
-            child: child,
-          ),
+        return Transform.translate(
+          offset: Offset(0, travel * (1 - t)),
+          child: child,
         );
       },
       child: child,
@@ -176,7 +172,7 @@ class DsPulse extends StatefulWidget {
     super.key,
     required this.child,
     this.active = true,
-    this.period = const Duration(milliseconds: 900),
+    this.period = const Duration(milliseconds: 1200),
   });
 
   final Widget child;
@@ -231,31 +227,28 @@ class _DsPulseState extends State<DsPulse> with SingleTickerProviderStateMixin {
       animation: _controller,
       builder: (context, child) {
         final t = DsMotion.ambient.transform(_controller.value);
-        return Opacity(
-          opacity: 0.55 + 0.45 * t,
-          child: Transform.scale(scale: 1 + 0.12 * t, child: child),
-        );
+        return Opacity(opacity: 0.72 + 0.28 * t, child: child);
       },
-      child: widget.child,
+      child: RepaintBoundary(child: widget.child),
     );
   }
 }
 
-/// Route transition: a short horizontal drift with a cross-fade, so pushing a
-/// detail screen reads as "one item deeper", not a slide from the right.
+/// Route transition: a short horizontal drift, so detail screens read as
+/// "one item deeper" without compositing a full-screen fade.
 ///
 /// The direction is deliberately *not* Material's default; it echoes the
 /// ThreadRail entering from the left edge of every card.
 ///
-/// Pass [secondaryAnimation] (the route *underneath*) to have that page settle
-/// back and dim instead of freezing while the new page arrives.
+/// Pass [secondaryAnimation] (the route *underneath*) to let that page shift a
+/// fraction while the new page arrives, without fading a full-screen layer.
 class DsRouteTransition extends StatelessWidget {
   const DsRouteTransition({
     super.key,
     required this.animation,
     required this.child,
     this.secondaryAnimation,
-    this.dx = -0.04,
+    this.dx = -0.025,
     this.curve = DsMotion.enter,
     this.reverseCurve = DsMotion.exit,
   });
@@ -276,44 +269,27 @@ class DsRouteTransition extends StatelessWidget {
       curve: curve,
       reverseCurve: reverseCurve,
     );
-    final Widget moved;
-    if (context.reduceMotion) {
-      // Keep the fade (it still explains where the surface came from) and drop
-      // the displacement.
-      moved = FadeTransition(opacity: curved, child: child);
-    } else {
-      moved = AnimatedBuilder(
-        animation: curved,
-        builder: (context, child) {
-          final t = curved.value;
-          return Opacity(
-            opacity: t,
-            child: FractionalTranslation(
-              translation: Offset(dx * (1 - t), 0),
-              child: child,
-            ),
-          );
-        },
-        child: child,
-      );
-    }
+    if (context.reduceMotion) return child;
+    final moved = SlideTransition(
+      position: Tween<Offset>(
+        begin: Offset(dx, 0),
+        end: Offset.zero,
+      ).animate(curved),
+      child: RepaintBoundary(child: child),
+    );
     final behind = secondaryAnimation;
     if (behind == null) return moved;
-    // Outgoing page: 4% shrink and a 45% dim, ending before the incoming page
-    // has landed so the two never look equally important.
+    // The outgoing page moves by a barely visible amount; no whole-page fade
+    // or scale layer is needed during the transition.
     final settle = CurvedAnimation(
       parent: behind,
-      curve: Interval(0, 0.75, curve: DsMotion.exit),
+      curve: Interval(0, 0.8, curve: DsMotion.exit),
     );
-    return AnimatedBuilder(
-      animation: settle,
-      builder: (context, child) {
-        final t = settle.value;
-        return Opacity(
-          opacity: 1 - 0.45 * t,
-          child: Transform.scale(scale: 1 - 0.04 * t, child: child),
-        );
-      },
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: Offset.zero,
+        end: const Offset(0.008, 0),
+      ).animate(settle),
       child: moved,
     );
   }

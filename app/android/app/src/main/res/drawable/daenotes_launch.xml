@@ -1,0 +1,8 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@android:color/white" />
+    <item
+        android:drawable="@drawable/daenotes_icon_foreground"
+        android:width="168dp"
+        android:height="168dp"
+        android:gravity="center" />
+</layer-list>

@@ -33,11 +33,15 @@ class DaeItem {
     required this.title,
     required this.preview,
     required this.updatedAt,
+    this.ownerUserId,
+    this.canEdit = true,
     this.done = false,
     this.pinned = false,
     this.priority,
     this.dueAt,
     this.remindAt,
+    this.groupName,
+    this.archivedAt,
   });
 
   factory DaeItem.fromNote(Note n) => DaeItem(
@@ -46,7 +50,11 @@ class DaeItem {
     title: n.title,
     preview: n.body,
     updatedAt: n.updatedAt,
+    ownerUserId: n.ownerUserId,
+    canEdit: n.canEdit,
     pinned: n.pinned,
+    groupName: n.groupName,
+    archivedAt: n.archivedAt,
   );
 
   factory DaeItem.fromTodo(Todo t) => DaeItem(
@@ -55,10 +63,14 @@ class DaeItem {
     title: t.title,
     preview: t.notes ?? '',
     updatedAt: t.updatedAt,
+    ownerUserId: t.ownerUserId,
+    canEdit: t.canEdit,
     done: t.done,
     priority: t.priority,
     dueAt: t.dueAt,
     remindAt: t.remindAt,
+    groupName: t.groupName,
+    archivedAt: t.archivedAt,
   );
 
   final DaeItemType type;
@@ -66,11 +78,15 @@ class DaeItem {
   final String title;
   final String preview;
   final DateTime updatedAt;
+  final int? ownerUserId;
+  final bool canEdit;
   final bool done;
   final bool pinned;
   final TodoPriority? priority;
   final DateTime? dueAt;
   final DateTime? remindAt;
+  final String? groupName;
+  final DateTime? archivedAt;
 
   DaeItemRef get ref => DaeItemRef(type, uuid);
 

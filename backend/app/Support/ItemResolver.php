@@ -6,6 +6,7 @@ use App\Models\Note;
 use App\Models\Todo;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Resolves the uuid references that link and reminder rows carry.
@@ -70,6 +71,30 @@ final class ItemResolver
         }
 
         return array_fill_keys($query->whereIn('uuid', $uuids)->pluck('uuid')->all(), true);
+    }
+
+    /** @param string[] $uuids
+     *  @return array<string, bool>
+     */
+    public static function revokedUuids(string $type, array $uuids, int $userId): array
+    {
+        $table = match ($type) {
+            'note' => 'notes',
+            'todo' => 'todos',
+            default => null,
+        };
+        if ($table === null || $uuids === []) return [];
+
+        $revoked = DB::table('item_shares')
+            ->join($table, 'item_shares.item_id', '=', $table.'.id')
+            ->where('item_shares.item_type', $type)
+            ->where('item_shares.shared_with_user_id', $userId)
+            ->whereNotNull('item_shares.revoked_at')
+            ->whereIn($table.'.uuid', $uuids)
+            ->pluck($table.'.uuid')
+            ->all();
+
+        return array_fill_keys($revoked, true);
     }
 
     /**

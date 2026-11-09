@@ -15,7 +15,12 @@ class TodoResource extends JsonResource
         return [
             'id' => $this->id,
             'uuid' => $this->uuid,
+            'owner_user_id' => (int) $this->user_id,
+            'access_level' => (int) $this->user_id === (int) $request->user()?->id
+                ? 'owner'
+                : ($this->shared_permission ?? 'viewer'),
             'title' => $this->title,
+            'group_name' => $this->group_name,
             'notes' => $this->notes,
             'done' => (bool) $this->done,
             'done_at' => $this->ts($this->done_at),

@@ -8,10 +8,13 @@ use App\Http\Resources\NoteResource;
 use App\Http\Resources\ReminderResource;
 use App\Http\Resources\TodoResource;
 use App\Models\Link;
+use App\Models\ItemShare;
 use App\Models\Note;
 use App\Models\Reminder;
 use App\Models\Todo;
+use App\Models\Scopes\OwnedByUserScope;
 use App\Support\Timestamp;
+use App\Support\ItemResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -57,6 +60,45 @@ class SyncController extends Controller
             $deleted[$bucket] = $deadQuery->pluck('uuid')->all();
         }
 
+        // A revoked collaborator loses the server row from their ownership
+        // scope. Send a tombstone so their offline mirror drops that copy.
+        $revoked = ItemShare::query()
+            ->where('shared_with_user_id', $request->user()->id)
+            ->whereNotNull('revoked_at')
+            ->when($since, fn ($query) => $query->where('revoked_at', '>', $since))
+            ->get(['item_type', 'item_id']);
+        foreach ($revoked->groupBy('item_type') as $type => $shares) {
+            $model = $type === 'note' ? Note::class : Todo::class;
+            $bucket = $type === 'note' ? 'notes' : 'todos';
+            $deleted[$bucket] = array_values(array_unique([
+                ...$deleted[$bucket],
+                ...$model::withoutGlobalScopes()->whereIn('id', $shares->pluck('item_id'))->pluck('uuid')->all(),
+            ]));
+        }
+
+        // Sharing permission changes are tracked by item_shares.updated_at,
+        // not by the note/todo content timestamp. Include those rows in the
+        // delta so a collaborator's offline mirror promptly learns that an
+        // owner switched the grant between viewer and editor.
+        $permissionChanges = ItemShare::query()
+            ->where('shared_with_user_id', $request->user()->id)
+            ->whereNull('revoked_at')
+            // Inclusive comparison avoids losing a role update when the
+            // database and sync cursor have the same one-second precision.
+            ->when($since, fn ($query) => $query->where('updated_at', '>=', $since))
+            ->get(['item_type', 'item_id']);
+        foreach ($permissionChanges->groupBy('item_type') as $type => $shares) {
+            $isNote = $type === 'note';
+            $bucket = $isNote ? 'notes' : 'todos';
+            $model = $isNote ? Note::class : Todo::class;
+            $resource = $isNote ? NoteResource::class : TodoResource::class;
+            $rowsByUuid = collect($changes[$bucket])->keyBy('uuid');
+            foreach ($model::query()->whereIn('id', $shares->pluck('item_id'))->get() as $item) {
+                $rowsByUuid[$item->uuid] = (new $resource($item))->resolve();
+            }
+            $changes[$bucket] = $rowsByUuid->values()->all();
+        }
+
         return response()->json([
             'data' => [
                 ...$changes,
@@ -75,6 +117,8 @@ class SyncController extends Controller
     {
         $accepted = [];
         $conflicts = [];
+        $revoked = [];
+        $readOnly = [];
 
         foreach (self::PUSH_ORDER as $bucket) {
             $meta = self::TYPES[$bucket];
@@ -88,6 +132,14 @@ class SyncController extends Controller
                         'uuid' => $item['uuid'],
                         'server' => $result['server'],
                     ];
+                } elseif ($result['status'] === 'read_only') {
+                    $readOnly[] = [
+                        'type' => $meta['label'],
+                        'uuid' => $item['uuid'],
+                        'server' => $result['server'],
+                    ];
+                } elseif ($result['status'] === 'revoked') {
+                    $revoked[] = ['type' => $meta['label'], 'uuid' => $item['uuid']];
                 } else {
                     $accepted[] = ['type' => $meta['label'], 'uuid' => $item['uuid']];
                 }
@@ -101,6 +153,16 @@ class SyncController extends Controller
                 $row = $model::findByUuid($delete['uuid'], withTrashed: true);
 
                 if ($row && ! $row->trashed()) {
+                    if (in_array($model, [Note::class, Todo::class], true)
+                        && (int) $row->user_id !== (int) $request->user()->id) {
+                        $resource = $model === Note::class ? NoteResource::class : TodoResource::class;
+                        $readOnly[] = [
+                            'type' => $model === Note::class ? 'note' : 'todo',
+                            'uuid' => $row->uuid,
+                            'server' => (new $resource($row))->resolve(),
+                        ];
+                        continue;
+                    }
                     $row->delete();
                 }
             }
@@ -113,6 +175,8 @@ class SyncController extends Controller
             'data' => [
                 'accepted' => $accepted,
                 'conflicts' => $conflicts,
+                'revoked' => $revoked,
+                'read_only' => $readOnly,
                 'server_time' => now()->setTimezone('UTC')->format('Y-m-d\TH:i:s\Z'),
             ],
         ]);
@@ -121,9 +185,42 @@ class SyncController extends Controller
     private function upsertItem(array $meta, array $item): array
     {
         $model = $meta['model'];
+
+        if (! $this->referencesAvailable($meta['label'], $item)) {
+            return ['status' => 'revoked'];
+        }
+
         $existing = $model::findByUuid($item['uuid'], withTrashed: true);
 
         if ($existing) {
+            // A collaborator may edit an active shared row, but cannot revive
+            // an owner-deleted row through an offline upsert.
+            if ($existing->trashed()
+                && in_array($model, [Note::class, Todo::class], true)
+                && (int) $existing->user_id !== (int) auth()->id()) {
+                return [
+                    'status' => 'read_only',
+                    'server' => new $meta['resource']($existing)->resolve(),
+                ];
+            }
+
+            if (in_array($model, [Note::class, Todo::class], true)
+                && (int) $existing->user_id !== (int) auth()->id()) {
+                $type = $model === Note::class ? 'note' : 'todo';
+                $permission = ItemShare::query()
+                    ->where('item_type', $type)
+                    ->where('item_id', $existing->id)
+                    ->where('shared_with_user_id', auth()->id())
+                    ->whereNull('revoked_at')
+                    ->value('permission');
+                if ($permission !== 'editor') {
+                    return [
+                        'status' => 'read_only',
+                        'server' => new $meta['resource']($existing)->resolve(),
+                    ];
+                }
+            }
+
             $clientTime = Timestamp::utc('updated_at', $item['updated_at'] ?? null);
 
             if ($clientTime && $existing->updated_at && $existing->updated_at->greaterThan($clientTime)) {
@@ -149,6 +246,16 @@ class SyncController extends Controller
             return ['status' => 'accepted'];
         }
 
+        // A UUID belonging to an account that revoked sharing must never be
+        // recreated as a new row owned by the former collaborator.
+        $existsOutsideAccess = $model::withoutGlobalScope(OwnedByUserScope::class)
+            ->withTrashed()
+            ->where('uuid', $item['uuid'])
+            ->exists();
+        if ($existsOutsideAccess) {
+            return ['status' => 'revoked'];
+        }
+
         $model::create([
             ...$this->attributes($model, $item),
             'user_id' => auth()->id(),
@@ -156,6 +263,28 @@ class SyncController extends Controller
         ]);
 
         return ['status' => 'accepted'];
+    }
+
+    private function referencesAvailable(string $type, array $item): bool
+    {
+        $references = match ($type) {
+            'link' => [
+                ['type' => $item['source_type'], 'uuid' => $item['source_uuid']],
+                ['type' => $item['target_type'], 'uuid' => $item['target_uuid']],
+            ],
+            'reminder' => [
+                ['type' => $item['item_type'], 'uuid' => $item['item_uuid']],
+            ],
+            default => [],
+        };
+
+        foreach ($references as $reference) {
+            if (ItemResolver::find($reference['type'], $reference['uuid']) === null) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function attributes(string $model, array $item): array

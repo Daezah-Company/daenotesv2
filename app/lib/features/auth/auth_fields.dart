@@ -28,6 +28,7 @@ class AuthField extends StatelessWidget {
     this.textInputAction = TextInputAction.next,
     this.autofillHints,
     this.onSubmitted,
+    this.onChanged,
   });
 
   final AuthFieldKind kind;
@@ -44,6 +45,7 @@ class AuthField extends StatelessWidget {
   final TextInputAction textInputAction;
   final Iterable<String>? autofillHints;
   final VoidCallback? onSubmitted;
+  final ValueChanged<String>? onChanged;
 
   /// Stable hook for integration tests and focus order.
   static Key inputKey(AuthFieldKind kind) =>
@@ -61,6 +63,7 @@ class AuthField extends StatelessWidget {
         keyboardType: keyboardType,
         textInputAction: textInputAction,
         autofillHints: autofillHints,
+        onChanged: onChanged,
         autocorrect: false,
         enableSuggestions: !obscure,
         maxLines: 1,
@@ -79,7 +82,7 @@ class AuthField extends StatelessWidget {
           isDense: true,
           labelStyle: DsType.eyebrow(color: dae.onSurfaceSecondary),
           floatingLabelStyle: DsType.eyebrow(
-            color: error == null ? dae.onSurfaceSecondary : Ds.threadRose,
+            color: error == null ? dae.onSurfaceSecondary : dae.onSurface,
             weight: FontWeight.w600,
           ),
           hintStyle: DsType.caption(color: dae.onSurfaceSecondary),

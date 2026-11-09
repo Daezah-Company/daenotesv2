@@ -48,6 +48,10 @@ class NoteController extends Controller
 
         if ($existing = Note::findByUuid($data['uuid'], withTrashed: true)) {
             if ($existing->trashed()) {
+                abort_unless(
+                    (int) $existing->user_id === (int) $request->user()->id,
+                    404,
+                );
                 $existing->fill($data)->restore();
                 $existing->forceFill(['synced_at' => now()])->save();
 
@@ -73,6 +77,7 @@ class NoteController extends Controller
     public function update(UpdateNoteRequest $request, string $uuid): NoteResource
     {
         $note = $this->findOwned(Note::class, $uuid);
+        $this->assertCanEditSharedItem($note);
         $note->fill(Timestamp::forModel(Note::class, $request->validated()))
             ->forceFill(['synced_at' => now()])->save();
 
@@ -81,7 +86,7 @@ class NoteController extends Controller
 
     public function destroy(string $uuid): JsonResponse
     {
-        $note = $this->findOwned(Note::class, $uuid);
+        $note = $this->findOwnedForDelete(Note::class, $uuid);
         $note->delete();
 
         return response()->json([
@@ -92,6 +97,7 @@ class NoteController extends Controller
     public function archive(string $uuid): NoteResource
     {
         $note = $this->findOwned(Note::class, $uuid);
+        $this->assertCanEditSharedItem($note);
         $note->forceFill(['archived_at' => now()])->save();
 
         return new NoteResource($note->fresh());
@@ -100,6 +106,10 @@ class NoteController extends Controller
     public function restore(string $uuid): NoteResource
     {
         $note = $this->findOwned(Note::class, $uuid, withTrashed: true);
+        $this->assertCanEditSharedItem($note);
+        if ($note->trashed() && (int) $note->user_id !== (int) auth()->id()) {
+            throw new \Symfony\Component\HttpKernel\Exception\HttpException(404, 'Not Found');
+        }
         $note->forceFill(['archived_at' => null])->save();
 
         if ($note->trashed()) {

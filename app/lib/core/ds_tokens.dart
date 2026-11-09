@@ -2,48 +2,45 @@ import 'package:flutter/painting.dart';
 
 import 'dae_types.dart';
 
-/// Design tokens for DaeNotes — the single source of visual truth.
-/// Concept (contract section 5): the chrome is strictly bichrome
-/// graphite/paper; colour is reserved for connection threads, type marks and
-/// status. Hexes here are contract section 6 verbatim — see
-/// `test/theme/chrome_palette_test.dart`.
+/// Design tokens for DaeNotes — strict monochrome: #282828 and white.
+/// Secondary contrast and hairlines are alpha blends of those two values.
 abstract final class Ds {
   // ---------------------------------------------------------------- chrome
   /// Dark surface, text colour above `paper`.
   static const Color ink = Color(0xFF282828);
 
-  /// Deepest background (graph canvas).
-  static const Color inkDeep = Color(0xFF1C1C1B);
+  /// Compatibility alias. The canvas uses the same graphite as the chrome.
+  static const Color inkDeep = ink;
 
-  /// Elevated card / panel surface.
-  static const Color inkLift = Color(0xFF353533);
+  /// Compatibility alias. Hierarchy comes from spacing and hairlines.
+  static const Color inkLift = ink;
 
   /// Light surface, text colour above `ink`. Paper is the one light surface;
   /// cards on it are separated by `ink` hairlines, not by a second white.
   static const Color paper = Color(0xFFFFFFFF);
 
-  /// Secondary text / hairlines.
-  static const Color paperVeil = Color(0xFF8B8B84);
+  /// White at reduced opacity, for secondary text/hairlines on graphite.
+  static const Color paperVeil = Color(0xB8FFFFFF);
 
-  /// Secondary text on a dark surface. `paperVeil` alone is 4.47:1 on `ink`,
-  /// just under AA, so the text role gets its own lift.
-  static const Color veilOnInk = Color(0xFF9A9A93);
+  /// Secondary text on graphite, composited from white.
+  static const Color veilOnInk = Color(0xB8FFFFFF);
 
-  /// Secondary text on `paper`. `paperVeil` on white is only 3.4:1.
-  static const Color veilOnPaper = Color(0xFF6E6E68);
+  /// Secondary text on white, composited from graphite.
+  static const Color veilOnPaper = Color(0xB8282828);
 
   // --------------------------------------------------------------- threads
-  /// note -> note.
-  static const Color threadAmber = Color(0xFFE3B23C);
+  /// Monochrome relation/status roles. Their semantic names remain for API
+  /// compatibility; widgets resolve them against the active theme surface.
+  static const Color threadAmber = ink;
 
   /// note -> todo.
-  static const Color threadMoss = Color(0xFF6FA88A);
+  static const Color threadMoss = ink;
 
   /// todo -> todo.
-  static const Color threadSlate = Color(0xFF7FA0C8);
+  static const Color threadSlate = ink;
 
   /// reminder / active status.
-  static const Color threadRose = Color(0xFFC9768F);
+  static const Color threadRose = ink;
 
   /// Thread colour for a connection between two item types.
   static Color threadColor(DaeItemType a, DaeItemType b) =>
@@ -64,9 +61,9 @@ abstract final class Ds {
   static const double s8 = 48;
 
   // ---------------------------------------------------------------- radii
-  static const double radiusSm = 10;
-  static const double radius = 16;
-  static const double radiusLg = 24;
+  static const double radiusSm = 2;
+  static const double radius = 4;
+  static const double radiusLg = 8;
 
   /// Signature 3px list-spine rail width.
   static const double railWidth = 3;

@@ -31,10 +31,18 @@ class SyncPushResult {
   const SyncPushResult({
     required this.accepted,
     required this.conflicts,
+    this.revoked = const [],
+    this.readOnly = const [],
     this.serverTime,
   });
   final List<SyncAccepted> accepted;
   final List<SyncConflict> conflicts;
+
+  /// Shared rows the server no longer exposes to this account.
+  final List<SyncAccepted> revoked;
+
+  /// Deletes/resurrections rejected because the current account is not owner.
+  final List<SyncConflict> readOnly;
   final DateTime? serverTime;
 }
 
@@ -125,6 +133,14 @@ class ApiSyncTransport implements SyncTransport {
           .whereType<SyncAccepted>()
           .toList(),
       conflicts: (data['conflicts'] as List? ?? const [])
+          .map(_parseConflict)
+          .whereType<SyncConflict>()
+          .toList(),
+      revoked: (data['revoked'] as List? ?? const [])
+          .map(_parseAccepted)
+          .whereType<SyncAccepted>()
+          .toList(),
+      readOnly: (data['read_only'] as List? ?? const [])
           .map(_parseConflict)
           .whereType<SyncConflict>()
           .toList(),

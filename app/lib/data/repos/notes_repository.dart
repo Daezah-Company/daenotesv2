@@ -15,14 +15,20 @@ class NotesRepository {
   // ------------------------------------------------------------- watches
 
   /// Active (not deleted) notes, optionally including archived.
-  Stream<List<Note>> watchNotes({String? query, bool archived = false}) {
+  Stream<List<Note>> watchNotes({
+    String? query,
+    bool archived = false,
+    bool archivedOnly = false,
+  }) {
     final q = _db.select(_db.notes)
       ..where((t) => t.deletedAt.isNull())
       ..orderBy([
         (t) => OrderingTerm.desc(t.pinned),
         (t) => OrderingTerm.desc(t.updatedAt),
       ]);
-    if (!archived) {
+    if (archivedOnly) {
+      q.where((t) => t.archivedAt.isNotNull());
+    } else if (!archived) {
       q.where((t) => t.archivedAt.isNull());
     }
     final needle = query?.trim();
@@ -47,6 +53,7 @@ class NotesRepository {
     String title = '',
     String body = '',
     String? color,
+    String? groupName,
     bool pinned = false,
   }) async {
     final uuid = newUuid();
@@ -59,6 +66,7 @@ class NotesRepository {
             title: Value(title),
             body: Value(body),
             color: Value(color),
+            groupName: Value(groupName),
             pinned: Value(pinned),
             updatedAt: now,
           ),
@@ -72,6 +80,7 @@ class NotesRepository {
     String? title,
     String? body,
     String? color,
+    String? groupName,
     bool? pinned,
   }) async {
     final row = await byUuid(uuid);
@@ -83,6 +92,7 @@ class NotesRepository {
             title: title ?? row.title,
             body: body ?? row.body,
             color: Value(color ?? row.color),
+            groupName: Value(groupName ?? row.groupName),
             pinned: pinned ?? row.pinned,
             updatedAt: DateTime.now(),
           ),
@@ -147,9 +157,9 @@ class NotesRepository {
     'title': row.title,
     'body': row.body,
     'color': row.color,
+    'group_name': row.groupName,
     'pinned': row.pinned,
-    if (row.archivedAt != null)
-      'archived_at': row.archivedAt!.toUtc().toIso8601String(),
+    'archived_at': row.archivedAt?.toUtc().toIso8601String(),
     'updated_at': row.updatedAt.toUtc().toIso8601String(),
   };
 }

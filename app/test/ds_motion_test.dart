@@ -57,21 +57,21 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 60));
 
-      double opacityOf(String label) {
+      double verticalOffsetOf(String label) {
         final finder = find.ancestor(
           of: find.text(label),
-          matching: find.byType(Opacity),
+          matching: find.byType(Transform),
         );
-        final opacities = tester.widgetList<Opacity>(finder).toList();
-        return opacities.last.opacity;
+        final transforms = tester.widgetList<Transform>(finder).toList();
+        return transforms.last.transform.getTranslation().y;
       }
 
-      expect(opacityOf('a'), greaterThan(0.5));
-      expect(opacityOf('b'), 0.0); // still inside its stagger delay
+      expect(verticalOffsetOf('a'), lessThan(7));
+      expect(verticalOffsetOf('b'), 14.0); // still inside its stagger delay
 
       await tester.pumpAndSettle();
-      expect(opacityOf('a'), 1.0);
-      expect(opacityOf('b'), 1.0);
+      expect(verticalOffsetOf('a'), 0.0);
+      expect(verticalOffsetOf('b'), 0.0);
     });
 
     testWidgets('reduce-motion renders it in place, no animation at all', (
@@ -173,7 +173,7 @@ void main() {
   });
 
   group('DsTabBar', () {
-    testWidgets('one underline travels to the chosen tab', (tester) async {
+    testWidgets('one active surface slides to the chosen tab', (tester) async {
       var index = 0;
       await tester.pumpWidget(
         MaterialApp(
@@ -196,26 +196,22 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // The underline is the only ColoredBox inside the strip.
-      final underline = find.descendant(
-        of: find.byType(DsTabBar),
-        matching: find.byType(ColoredBox),
-      );
-      expect(underline, findsOneWidget);
-      final start = tester.getRect(underline).left;
+      final activeSurface = find.byKey(const ValueKey('activeTabSurface'));
+      expect(activeSurface, findsOneWidget);
+      final start = tester.getRect(activeSurface).left;
 
       await tester.tap(find.text('GRAF'));
       await tester.pump();
       await tester.pump(DsMotion.panel ~/ 2);
-      final midway = tester.getRect(underline).left;
+      final midway = tester.getRect(activeSurface).left;
       expect(midway, greaterThan(start));
-      expect(midway, lessThan(start + 100));
+      expect(midway, lessThan(start + 84));
 
       await tester.pumpAndSettle();
-      expect(tester.getRect(underline).left, closeTo(start + 100, 0.5));
+      expect(tester.getRect(activeSurface).left, closeTo(start + 84, 0.5));
     });
 
-    testWidgets('reduce-motion jumps the underline instead of sliding', (
+    testWidgets('reduce-motion jumps the active surface instead of sliding', (
       tester,
     ) async {
       var index = 0;
@@ -242,6 +238,7 @@ void main() {
 
       expect(find.byType(AnimatedPositioned), findsNothing);
       expect(find.byType(Positioned), findsWidgets);
+      expect(find.byKey(const ValueKey('activeTabSurface')), findsOneWidget);
     });
   });
 
@@ -270,27 +267,24 @@ void main() {
         ),
       );
 
+      // The incoming page and the outgoing page each move a small amount.
       expect(
         find.descendant(
           of: find.byType(DsRouteTransition),
-          matching: find.byType(FractionalTranslation),
+          matching: find.byType(SlideTransition),
         ),
-        findsOneWidget,
+        findsNWidgets(2),
       );
-      // Incoming drift+fade and the outgoing settle+dim, all inside this one
-      // transition (MaterialApp has its own route fade above us).
       expect(
         find.descendant(
           of: find.byType(DsRouteTransition),
           matching: find.byType(Opacity),
         ),
-        findsNWidgets(2),
+        findsNothing,
       );
     });
 
-    testWidgets('reduce-motion keeps the fade, drops the displacement', (
-      tester,
-    ) async {
+    testWidgets('reduce-motion drops route movement', (tester) async {
       final incoming = AnimationController(
         vsync: const TestVSync(),
         value: 0.4,
@@ -311,14 +305,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(DsRouteTransition),
-          matching: find.byType(FadeTransition),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: find.byType(DsRouteTransition),
-          matching: find.byType(FractionalTranslation),
+          matching: find.byType(SlideTransition),
         ),
         findsNothing,
       );

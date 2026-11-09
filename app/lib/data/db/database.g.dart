@@ -31,6 +31,32 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
   );
+  static const VerificationMeta _ownerUserIdMeta = const VerificationMeta(
+    'ownerUserId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerUserId = GeneratedColumn<int>(
+    'owner_user_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _canEditMeta = const VerificationMeta(
+    'canEdit',
+  );
+  @override
+  late final GeneratedColumn<bool> canEdit = GeneratedColumn<bool>(
+    'can_edit',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("can_edit" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
@@ -55,6 +81,17 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
   @override
   late final GeneratedColumn<String> color = GeneratedColumn<String>(
     'color',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _groupNameMeta = const VerificationMeta(
+    'groupName',
+  );
+  @override
+  late final GeneratedColumn<String> groupName = GeneratedColumn<String>(
+    'group_name',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -121,9 +158,12 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
   List<GeneratedColumn> get $columns => [
     id,
     uuid,
+    ownerUserId,
+    canEdit,
     title,
     body,
     color,
+    groupName,
     pinned,
     archivedAt,
     deletedAt,
@@ -153,6 +193,21 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
     } else if (isInserting) {
       context.missing(_uuidMeta);
     }
+    if (data.containsKey('owner_user_id')) {
+      context.handle(
+        _ownerUserIdMeta,
+        ownerUserId.isAcceptableOrUnknown(
+          data['owner_user_id']!,
+          _ownerUserIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('can_edit')) {
+      context.handle(
+        _canEditMeta,
+        canEdit.isAcceptableOrUnknown(data['can_edit']!, _canEditMeta),
+      );
+    }
     if (data.containsKey('title')) {
       context.handle(
         _titleMeta,
@@ -169,6 +224,12 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
       context.handle(
         _colorMeta,
         color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('group_name')) {
+      context.handle(
+        _groupNameMeta,
+        groupName.isAcceptableOrUnknown(data['group_name']!, _groupNameMeta),
       );
     }
     if (data.containsKey('pinned')) {
@@ -220,6 +281,14 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
         DriftSqlType.string,
         data['${effectivePrefix}uuid'],
       )!,
+      ownerUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_user_id'],
+      ),
+      canEdit: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}can_edit'],
+      )!,
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -231,6 +300,10 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
       color: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}color'],
+      ),
+      groupName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_name'],
       ),
       pinned: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
@@ -264,9 +337,12 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
 class Note extends DataClass implements Insertable<Note> {
   final int id;
   final String uuid;
+  final int? ownerUserId;
+  final bool canEdit;
   final String title;
   final String body;
   final String? color;
+  final String? groupName;
   final bool pinned;
   final DateTime? archivedAt;
   final DateTime? deletedAt;
@@ -275,9 +351,12 @@ class Note extends DataClass implements Insertable<Note> {
   const Note({
     required this.id,
     required this.uuid,
+    this.ownerUserId,
+    required this.canEdit,
     required this.title,
     required this.body,
     this.color,
+    this.groupName,
     required this.pinned,
     this.archivedAt,
     this.deletedAt,
@@ -289,10 +368,17 @@ class Note extends DataClass implements Insertable<Note> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['uuid'] = Variable<String>(uuid);
+    if (!nullToAbsent || ownerUserId != null) {
+      map['owner_user_id'] = Variable<int>(ownerUserId);
+    }
+    map['can_edit'] = Variable<bool>(canEdit);
     map['title'] = Variable<String>(title);
     map['body'] = Variable<String>(body);
     if (!nullToAbsent || color != null) {
       map['color'] = Variable<String>(color);
+    }
+    if (!nullToAbsent || groupName != null) {
+      map['group_name'] = Variable<String>(groupName);
     }
     map['pinned'] = Variable<bool>(pinned);
     if (!nullToAbsent || archivedAt != null) {
@@ -312,11 +398,18 @@ class Note extends DataClass implements Insertable<Note> {
     return NotesCompanion(
       id: Value(id),
       uuid: Value(uuid),
+      ownerUserId: ownerUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerUserId),
+      canEdit: Value(canEdit),
       title: Value(title),
       body: Value(body),
       color: color == null && nullToAbsent
           ? const Value.absent()
           : Value(color),
+      groupName: groupName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(groupName),
       pinned: Value(pinned),
       archivedAt: archivedAt == null && nullToAbsent
           ? const Value.absent()
@@ -339,9 +432,12 @@ class Note extends DataClass implements Insertable<Note> {
     return Note(
       id: serializer.fromJson<int>(json['id']),
       uuid: serializer.fromJson<String>(json['uuid']),
+      ownerUserId: serializer.fromJson<int?>(json['ownerUserId']),
+      canEdit: serializer.fromJson<bool>(json['canEdit']),
       title: serializer.fromJson<String>(json['title']),
       body: serializer.fromJson<String>(json['body']),
       color: serializer.fromJson<String?>(json['color']),
+      groupName: serializer.fromJson<String?>(json['groupName']),
       pinned: serializer.fromJson<bool>(json['pinned']),
       archivedAt: serializer.fromJson<DateTime?>(json['archivedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -355,9 +451,12 @@ class Note extends DataClass implements Insertable<Note> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'uuid': serializer.toJson<String>(uuid),
+      'ownerUserId': serializer.toJson<int?>(ownerUserId),
+      'canEdit': serializer.toJson<bool>(canEdit),
       'title': serializer.toJson<String>(title),
       'body': serializer.toJson<String>(body),
       'color': serializer.toJson<String?>(color),
+      'groupName': serializer.toJson<String?>(groupName),
       'pinned': serializer.toJson<bool>(pinned),
       'archivedAt': serializer.toJson<DateTime?>(archivedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -369,9 +468,12 @@ class Note extends DataClass implements Insertable<Note> {
   Note copyWith({
     int? id,
     String? uuid,
+    Value<int?> ownerUserId = const Value.absent(),
+    bool? canEdit,
     String? title,
     String? body,
     Value<String?> color = const Value.absent(),
+    Value<String?> groupName = const Value.absent(),
     bool? pinned,
     Value<DateTime?> archivedAt = const Value.absent(),
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -380,9 +482,12 @@ class Note extends DataClass implements Insertable<Note> {
   }) => Note(
     id: id ?? this.id,
     uuid: uuid ?? this.uuid,
+    ownerUserId: ownerUserId.present ? ownerUserId.value : this.ownerUserId,
+    canEdit: canEdit ?? this.canEdit,
     title: title ?? this.title,
     body: body ?? this.body,
     color: color.present ? color.value : this.color,
+    groupName: groupName.present ? groupName.value : this.groupName,
     pinned: pinned ?? this.pinned,
     archivedAt: archivedAt.present ? archivedAt.value : this.archivedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -393,9 +498,14 @@ class Note extends DataClass implements Insertable<Note> {
     return Note(
       id: data.id.present ? data.id.value : this.id,
       uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      ownerUserId: data.ownerUserId.present
+          ? data.ownerUserId.value
+          : this.ownerUserId,
+      canEdit: data.canEdit.present ? data.canEdit.value : this.canEdit,
       title: data.title.present ? data.title.value : this.title,
       body: data.body.present ? data.body.value : this.body,
       color: data.color.present ? data.color.value : this.color,
+      groupName: data.groupName.present ? data.groupName.value : this.groupName,
       pinned: data.pinned.present ? data.pinned.value : this.pinned,
       archivedAt: data.archivedAt.present
           ? data.archivedAt.value
@@ -411,9 +521,12 @@ class Note extends DataClass implements Insertable<Note> {
     return (StringBuffer('Note(')
           ..write('id: $id, ')
           ..write('uuid: $uuid, ')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('canEdit: $canEdit, ')
           ..write('title: $title, ')
           ..write('body: $body, ')
           ..write('color: $color, ')
+          ..write('groupName: $groupName, ')
           ..write('pinned: $pinned, ')
           ..write('archivedAt: $archivedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -427,9 +540,12 @@ class Note extends DataClass implements Insertable<Note> {
   int get hashCode => Object.hash(
     id,
     uuid,
+    ownerUserId,
+    canEdit,
     title,
     body,
     color,
+    groupName,
     pinned,
     archivedAt,
     deletedAt,
@@ -442,9 +558,12 @@ class Note extends DataClass implements Insertable<Note> {
       (other is Note &&
           other.id == this.id &&
           other.uuid == this.uuid &&
+          other.ownerUserId == this.ownerUserId &&
+          other.canEdit == this.canEdit &&
           other.title == this.title &&
           other.body == this.body &&
           other.color == this.color &&
+          other.groupName == this.groupName &&
           other.pinned == this.pinned &&
           other.archivedAt == this.archivedAt &&
           other.deletedAt == this.deletedAt &&
@@ -455,9 +574,12 @@ class Note extends DataClass implements Insertable<Note> {
 class NotesCompanion extends UpdateCompanion<Note> {
   final Value<int> id;
   final Value<String> uuid;
+  final Value<int?> ownerUserId;
+  final Value<bool> canEdit;
   final Value<String> title;
   final Value<String> body;
   final Value<String?> color;
+  final Value<String?> groupName;
   final Value<bool> pinned;
   final Value<DateTime?> archivedAt;
   final Value<DateTime?> deletedAt;
@@ -466,9 +588,12 @@ class NotesCompanion extends UpdateCompanion<Note> {
   const NotesCompanion({
     this.id = const Value.absent(),
     this.uuid = const Value.absent(),
+    this.ownerUserId = const Value.absent(),
+    this.canEdit = const Value.absent(),
     this.title = const Value.absent(),
     this.body = const Value.absent(),
     this.color = const Value.absent(),
+    this.groupName = const Value.absent(),
     this.pinned = const Value.absent(),
     this.archivedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -478,9 +603,12 @@ class NotesCompanion extends UpdateCompanion<Note> {
   NotesCompanion.insert({
     this.id = const Value.absent(),
     required String uuid,
+    this.ownerUserId = const Value.absent(),
+    this.canEdit = const Value.absent(),
     this.title = const Value.absent(),
     this.body = const Value.absent(),
     this.color = const Value.absent(),
+    this.groupName = const Value.absent(),
     this.pinned = const Value.absent(),
     this.archivedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -491,9 +619,12 @@ class NotesCompanion extends UpdateCompanion<Note> {
   static Insertable<Note> custom({
     Expression<int>? id,
     Expression<String>? uuid,
+    Expression<int>? ownerUserId,
+    Expression<bool>? canEdit,
     Expression<String>? title,
     Expression<String>? body,
     Expression<String>? color,
+    Expression<String>? groupName,
     Expression<bool>? pinned,
     Expression<DateTime>? archivedAt,
     Expression<DateTime>? deletedAt,
@@ -503,9 +634,12 @@ class NotesCompanion extends UpdateCompanion<Note> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (uuid != null) 'uuid': uuid,
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      if (canEdit != null) 'can_edit': canEdit,
       if (title != null) 'title': title,
       if (body != null) 'body': body,
       if (color != null) 'color': color,
+      if (groupName != null) 'group_name': groupName,
       if (pinned != null) 'pinned': pinned,
       if (archivedAt != null) 'archived_at': archivedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -517,9 +651,12 @@ class NotesCompanion extends UpdateCompanion<Note> {
   NotesCompanion copyWith({
     Value<int>? id,
     Value<String>? uuid,
+    Value<int?>? ownerUserId,
+    Value<bool>? canEdit,
     Value<String>? title,
     Value<String>? body,
     Value<String?>? color,
+    Value<String?>? groupName,
     Value<bool>? pinned,
     Value<DateTime?>? archivedAt,
     Value<DateTime?>? deletedAt,
@@ -529,9 +666,12 @@ class NotesCompanion extends UpdateCompanion<Note> {
     return NotesCompanion(
       id: id ?? this.id,
       uuid: uuid ?? this.uuid,
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      canEdit: canEdit ?? this.canEdit,
       title: title ?? this.title,
       body: body ?? this.body,
       color: color ?? this.color,
+      groupName: groupName ?? this.groupName,
       pinned: pinned ?? this.pinned,
       archivedAt: archivedAt ?? this.archivedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -549,6 +689,12 @@ class NotesCompanion extends UpdateCompanion<Note> {
     if (uuid.present) {
       map['uuid'] = Variable<String>(uuid.value);
     }
+    if (ownerUserId.present) {
+      map['owner_user_id'] = Variable<int>(ownerUserId.value);
+    }
+    if (canEdit.present) {
+      map['can_edit'] = Variable<bool>(canEdit.value);
+    }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
     }
@@ -557,6 +703,9 @@ class NotesCompanion extends UpdateCompanion<Note> {
     }
     if (color.present) {
       map['color'] = Variable<String>(color.value);
+    }
+    if (groupName.present) {
+      map['group_name'] = Variable<String>(groupName.value);
     }
     if (pinned.present) {
       map['pinned'] = Variable<bool>(pinned.value);
@@ -581,9 +730,12 @@ class NotesCompanion extends UpdateCompanion<Note> {
     return (StringBuffer('NotesCompanion(')
           ..write('id: $id, ')
           ..write('uuid: $uuid, ')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('canEdit: $canEdit, ')
           ..write('title: $title, ')
           ..write('body: $body, ')
           ..write('color: $color, ')
+          ..write('groupName: $groupName, ')
           ..write('pinned: $pinned, ')
           ..write('archivedAt: $archivedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -622,6 +774,32 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
   );
+  static const VerificationMeta _ownerUserIdMeta = const VerificationMeta(
+    'ownerUserId',
+  );
+  @override
+  late final GeneratedColumn<int> ownerUserId = GeneratedColumn<int>(
+    'owner_user_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _canEditMeta = const VerificationMeta(
+    'canEdit',
+  );
+  @override
+  late final GeneratedColumn<bool> canEdit = GeneratedColumn<bool>(
+    'can_edit',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("can_edit" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
@@ -636,6 +814,17 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
   @override
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
     'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _groupNameMeta = const VerificationMeta(
+    'groupName',
+  );
+  @override
+  late final GeneratedColumn<String> groupName = GeneratedColumn<String>(
+    'group_name',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -741,8 +930,11 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
   List<GeneratedColumn> get $columns => [
     id,
     uuid,
+    ownerUserId,
+    canEdit,
     title,
     notes,
+    groupName,
     done,
     doneAt,
     priority,
@@ -776,6 +968,21 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
     } else if (isInserting) {
       context.missing(_uuidMeta);
     }
+    if (data.containsKey('owner_user_id')) {
+      context.handle(
+        _ownerUserIdMeta,
+        ownerUserId.isAcceptableOrUnknown(
+          data['owner_user_id']!,
+          _ownerUserIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('can_edit')) {
+      context.handle(
+        _canEditMeta,
+        canEdit.isAcceptableOrUnknown(data['can_edit']!, _canEditMeta),
+      );
+    }
     if (data.containsKey('title')) {
       context.handle(
         _titleMeta,
@@ -786,6 +993,12 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
       context.handle(
         _notesMeta,
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('group_name')) {
+      context.handle(
+        _groupNameMeta,
+        groupName.isAcceptableOrUnknown(data['group_name']!, _groupNameMeta),
       );
     }
     if (data.containsKey('done')) {
@@ -855,6 +1068,14 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
         DriftSqlType.string,
         data['${effectivePrefix}uuid'],
       )!,
+      ownerUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}owner_user_id'],
+      ),
+      canEdit: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}can_edit'],
+      )!,
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -862,6 +1083,10 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
       notes: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
+      ),
+      groupName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_name'],
       ),
       done: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
@@ -916,8 +1141,11 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
 class Todo extends DataClass implements Insertable<Todo> {
   final int id;
   final String uuid;
+  final int? ownerUserId;
+  final bool canEdit;
   final String title;
   final String? notes;
+  final String? groupName;
   final bool done;
   final DateTime? doneAt;
   final TodoPriority priority;
@@ -930,8 +1158,11 @@ class Todo extends DataClass implements Insertable<Todo> {
   const Todo({
     required this.id,
     required this.uuid,
+    this.ownerUserId,
+    required this.canEdit,
     required this.title,
     this.notes,
+    this.groupName,
     required this.done,
     this.doneAt,
     required this.priority,
@@ -947,9 +1178,16 @@ class Todo extends DataClass implements Insertable<Todo> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['uuid'] = Variable<String>(uuid);
+    if (!nullToAbsent || ownerUserId != null) {
+      map['owner_user_id'] = Variable<int>(ownerUserId);
+    }
+    map['can_edit'] = Variable<bool>(canEdit);
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || groupName != null) {
+      map['group_name'] = Variable<String>(groupName);
     }
     map['done'] = Variable<bool>(done);
     if (!nullToAbsent || doneAt != null) {
@@ -983,10 +1221,17 @@ class Todo extends DataClass implements Insertable<Todo> {
     return TodosCompanion(
       id: Value(id),
       uuid: Value(uuid),
+      ownerUserId: ownerUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerUserId),
+      canEdit: Value(canEdit),
       title: Value(title),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      groupName: groupName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(groupName),
       done: Value(done),
       doneAt: doneAt == null && nullToAbsent
           ? const Value.absent()
@@ -1019,8 +1264,11 @@ class Todo extends DataClass implements Insertable<Todo> {
     return Todo(
       id: serializer.fromJson<int>(json['id']),
       uuid: serializer.fromJson<String>(json['uuid']),
+      ownerUserId: serializer.fromJson<int?>(json['ownerUserId']),
+      canEdit: serializer.fromJson<bool>(json['canEdit']),
       title: serializer.fromJson<String>(json['title']),
       notes: serializer.fromJson<String?>(json['notes']),
+      groupName: serializer.fromJson<String?>(json['groupName']),
       done: serializer.fromJson<bool>(json['done']),
       doneAt: serializer.fromJson<DateTime?>(json['doneAt']),
       priority: serializer.fromJson<TodoPriority>(json['priority']),
@@ -1038,8 +1286,11 @@ class Todo extends DataClass implements Insertable<Todo> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'uuid': serializer.toJson<String>(uuid),
+      'ownerUserId': serializer.toJson<int?>(ownerUserId),
+      'canEdit': serializer.toJson<bool>(canEdit),
       'title': serializer.toJson<String>(title),
       'notes': serializer.toJson<String?>(notes),
+      'groupName': serializer.toJson<String?>(groupName),
       'done': serializer.toJson<bool>(done),
       'doneAt': serializer.toJson<DateTime?>(doneAt),
       'priority': serializer.toJson<TodoPriority>(priority),
@@ -1055,8 +1306,11 @@ class Todo extends DataClass implements Insertable<Todo> {
   Todo copyWith({
     int? id,
     String? uuid,
+    Value<int?> ownerUserId = const Value.absent(),
+    bool? canEdit,
     String? title,
     Value<String?> notes = const Value.absent(),
+    Value<String?> groupName = const Value.absent(),
     bool? done,
     Value<DateTime?> doneAt = const Value.absent(),
     TodoPriority? priority,
@@ -1069,8 +1323,11 @@ class Todo extends DataClass implements Insertable<Todo> {
   }) => Todo(
     id: id ?? this.id,
     uuid: uuid ?? this.uuid,
+    ownerUserId: ownerUserId.present ? ownerUserId.value : this.ownerUserId,
+    canEdit: canEdit ?? this.canEdit,
     title: title ?? this.title,
     notes: notes.present ? notes.value : this.notes,
+    groupName: groupName.present ? groupName.value : this.groupName,
     done: done ?? this.done,
     doneAt: doneAt.present ? doneAt.value : this.doneAt,
     priority: priority ?? this.priority,
@@ -1085,8 +1342,13 @@ class Todo extends DataClass implements Insertable<Todo> {
     return Todo(
       id: data.id.present ? data.id.value : this.id,
       uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      ownerUserId: data.ownerUserId.present
+          ? data.ownerUserId.value
+          : this.ownerUserId,
+      canEdit: data.canEdit.present ? data.canEdit.value : this.canEdit,
       title: data.title.present ? data.title.value : this.title,
       notes: data.notes.present ? data.notes.value : this.notes,
+      groupName: data.groupName.present ? data.groupName.value : this.groupName,
       done: data.done.present ? data.done.value : this.done,
       doneAt: data.doneAt.present ? data.doneAt.value : this.doneAt,
       priority: data.priority.present ? data.priority.value : this.priority,
@@ -1106,8 +1368,11 @@ class Todo extends DataClass implements Insertable<Todo> {
     return (StringBuffer('Todo(')
           ..write('id: $id, ')
           ..write('uuid: $uuid, ')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('canEdit: $canEdit, ')
           ..write('title: $title, ')
           ..write('notes: $notes, ')
+          ..write('groupName: $groupName, ')
           ..write('done: $done, ')
           ..write('doneAt: $doneAt, ')
           ..write('priority: $priority, ')
@@ -1125,8 +1390,11 @@ class Todo extends DataClass implements Insertable<Todo> {
   int get hashCode => Object.hash(
     id,
     uuid,
+    ownerUserId,
+    canEdit,
     title,
     notes,
+    groupName,
     done,
     doneAt,
     priority,
@@ -1143,8 +1411,11 @@ class Todo extends DataClass implements Insertable<Todo> {
       (other is Todo &&
           other.id == this.id &&
           other.uuid == this.uuid &&
+          other.ownerUserId == this.ownerUserId &&
+          other.canEdit == this.canEdit &&
           other.title == this.title &&
           other.notes == this.notes &&
+          other.groupName == this.groupName &&
           other.done == this.done &&
           other.doneAt == this.doneAt &&
           other.priority == this.priority &&
@@ -1159,8 +1430,11 @@ class Todo extends DataClass implements Insertable<Todo> {
 class TodosCompanion extends UpdateCompanion<Todo> {
   final Value<int> id;
   final Value<String> uuid;
+  final Value<int?> ownerUserId;
+  final Value<bool> canEdit;
   final Value<String> title;
   final Value<String?> notes;
+  final Value<String?> groupName;
   final Value<bool> done;
   final Value<DateTime?> doneAt;
   final Value<TodoPriority> priority;
@@ -1173,8 +1447,11 @@ class TodosCompanion extends UpdateCompanion<Todo> {
   const TodosCompanion({
     this.id = const Value.absent(),
     this.uuid = const Value.absent(),
+    this.ownerUserId = const Value.absent(),
+    this.canEdit = const Value.absent(),
     this.title = const Value.absent(),
     this.notes = const Value.absent(),
+    this.groupName = const Value.absent(),
     this.done = const Value.absent(),
     this.doneAt = const Value.absent(),
     this.priority = const Value.absent(),
@@ -1188,8 +1465,11 @@ class TodosCompanion extends UpdateCompanion<Todo> {
   TodosCompanion.insert({
     this.id = const Value.absent(),
     required String uuid,
+    this.ownerUserId = const Value.absent(),
+    this.canEdit = const Value.absent(),
     this.title = const Value.absent(),
     this.notes = const Value.absent(),
+    this.groupName = const Value.absent(),
     this.done = const Value.absent(),
     this.doneAt = const Value.absent(),
     this.priority = const Value.absent(),
@@ -1204,8 +1484,11 @@ class TodosCompanion extends UpdateCompanion<Todo> {
   static Insertable<Todo> custom({
     Expression<int>? id,
     Expression<String>? uuid,
+    Expression<int>? ownerUserId,
+    Expression<bool>? canEdit,
     Expression<String>? title,
     Expression<String>? notes,
+    Expression<String>? groupName,
     Expression<bool>? done,
     Expression<DateTime>? doneAt,
     Expression<String>? priority,
@@ -1219,8 +1502,11 @@ class TodosCompanion extends UpdateCompanion<Todo> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (uuid != null) 'uuid': uuid,
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      if (canEdit != null) 'can_edit': canEdit,
       if (title != null) 'title': title,
       if (notes != null) 'notes': notes,
+      if (groupName != null) 'group_name': groupName,
       if (done != null) 'done': done,
       if (doneAt != null) 'done_at': doneAt,
       if (priority != null) 'priority': priority,
@@ -1236,8 +1522,11 @@ class TodosCompanion extends UpdateCompanion<Todo> {
   TodosCompanion copyWith({
     Value<int>? id,
     Value<String>? uuid,
+    Value<int?>? ownerUserId,
+    Value<bool>? canEdit,
     Value<String>? title,
     Value<String?>? notes,
+    Value<String?>? groupName,
     Value<bool>? done,
     Value<DateTime?>? doneAt,
     Value<TodoPriority>? priority,
@@ -1251,8 +1540,11 @@ class TodosCompanion extends UpdateCompanion<Todo> {
     return TodosCompanion(
       id: id ?? this.id,
       uuid: uuid ?? this.uuid,
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      canEdit: canEdit ?? this.canEdit,
       title: title ?? this.title,
       notes: notes ?? this.notes,
+      groupName: groupName ?? this.groupName,
       done: done ?? this.done,
       doneAt: doneAt ?? this.doneAt,
       priority: priority ?? this.priority,
@@ -1274,11 +1566,20 @@ class TodosCompanion extends UpdateCompanion<Todo> {
     if (uuid.present) {
       map['uuid'] = Variable<String>(uuid.value);
     }
+    if (ownerUserId.present) {
+      map['owner_user_id'] = Variable<int>(ownerUserId.value);
+    }
+    if (canEdit.present) {
+      map['can_edit'] = Variable<bool>(canEdit.value);
+    }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
     }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
+    }
+    if (groupName.present) {
+      map['group_name'] = Variable<String>(groupName.value);
     }
     if (done.present) {
       map['done'] = Variable<bool>(done.value);
@@ -1317,8 +1618,11 @@ class TodosCompanion extends UpdateCompanion<Todo> {
     return (StringBuffer('TodosCompanion(')
           ..write('id: $id, ')
           ..write('uuid: $uuid, ')
+          ..write('ownerUserId: $ownerUserId, ')
+          ..write('canEdit: $canEdit, ')
           ..write('title: $title, ')
           ..write('notes: $notes, ')
+          ..write('groupName: $groupName, ')
           ..write('done: $done, ')
           ..write('doneAt: $doneAt, ')
           ..write('priority: $priority, ')
@@ -3153,9 +3457,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 typedef $$NotesTableCreateCompanionBuilder = NotesCompanion Function({
   Value<int> id,
   required String uuid,
+  Value<int?> ownerUserId,
+  Value<bool> canEdit,
   Value<String> title,
   Value<String> body,
   Value<String?> color,
+  Value<String?> groupName,
   Value<bool> pinned,
   Value<DateTime?> archivedAt,
   Value<DateTime?> deletedAt,
@@ -3165,9 +3472,12 @@ typedef $$NotesTableCreateCompanionBuilder = NotesCompanion Function({
 typedef $$NotesTableUpdateCompanionBuilder = NotesCompanion Function({
   Value<int> id,
   Value<String> uuid,
+  Value<int?> ownerUserId,
+  Value<bool> canEdit,
   Value<String> title,
   Value<String> body,
   Value<String?> color,
+  Value<String?> groupName,
   Value<bool> pinned,
   Value<DateTime?> archivedAt,
   Value<DateTime?> deletedAt,
@@ -3193,6 +3503,16 @@ class $$NotesTableFilterComposer extends Composer<_$AppDatabase, $NotesTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get canEdit => $composableBuilder(
+    column: $table.canEdit,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnFilters(column),
@@ -3205,6 +3525,11 @@ class $$NotesTableFilterComposer extends Composer<_$AppDatabase, $NotesTable> {
 
   ColumnFilters<String> get color => $composableBuilder(
     column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get groupName => $composableBuilder(
+    column: $table.groupName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3253,6 +3578,16 @@ class $$NotesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get canEdit => $composableBuilder(
+    column: $table.canEdit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
@@ -3265,6 +3600,11 @@ class $$NotesTableOrderingComposer
 
   ColumnOrderings<String> get color => $composableBuilder(
     column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get groupName => $composableBuilder(
+    column: $table.groupName,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3309,6 +3649,14 @@ class $$NotesTableAnnotationComposer
   GeneratedColumn<String> get uuid =>
       $composableBuilder(column: $table.uuid, builder: (column) => column);
 
+  GeneratedColumn<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get canEdit =>
+      $composableBuilder(column: $table.canEdit, builder: (column) => column);
+
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
 
@@ -3317,6 +3665,9 @@ class $$NotesTableAnnotationComposer
 
   GeneratedColumn<String> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<String> get groupName =>
+      $composableBuilder(column: $table.groupName, builder: (column) => column);
 
   GeneratedColumn<bool> get pinned =>
       $composableBuilder(column: $table.pinned, builder: (column) => column);
@@ -3366,9 +3717,12 @@ class $$NotesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> uuid = const Value.absent(),
+                Value<int?> ownerUserId = const Value.absent(),
+                Value<bool> canEdit = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String> body = const Value.absent(),
                 Value<String?> color = const Value.absent(),
+                Value<String?> groupName = const Value.absent(),
                 Value<bool> pinned = const Value.absent(),
                 Value<DateTime?> archivedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -3377,9 +3731,12 @@ class $$NotesTableTableManager
               }) => NotesCompanion(
                 id: id,
                 uuid: uuid,
+                ownerUserId: ownerUserId,
+                canEdit: canEdit,
                 title: title,
                 body: body,
                 color: color,
+                groupName: groupName,
                 pinned: pinned,
                 archivedAt: archivedAt,
                 deletedAt: deletedAt,
@@ -3390,9 +3747,12 @@ class $$NotesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String uuid,
+                Value<int?> ownerUserId = const Value.absent(),
+                Value<bool> canEdit = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String> body = const Value.absent(),
                 Value<String?> color = const Value.absent(),
+                Value<String?> groupName = const Value.absent(),
                 Value<bool> pinned = const Value.absent(),
                 Value<DateTime?> archivedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -3401,9 +3761,12 @@ class $$NotesTableTableManager
               }) => NotesCompanion.insert(
                 id: id,
                 uuid: uuid,
+                ownerUserId: ownerUserId,
+                canEdit: canEdit,
                 title: title,
                 body: body,
                 color: color,
+                groupName: groupName,
                 pinned: pinned,
                 archivedAt: archivedAt,
                 deletedAt: deletedAt,
@@ -3444,8 +3807,11 @@ typedef $$NotesTableProcessedTableManager =
 typedef $$TodosTableCreateCompanionBuilder = TodosCompanion Function({
   Value<int> id,
   required String uuid,
+  Value<int?> ownerUserId,
+  Value<bool> canEdit,
   Value<String> title,
   Value<String?> notes,
+  Value<String?> groupName,
   Value<bool> done,
   Value<DateTime?> doneAt,
   Value<TodoPriority> priority,
@@ -3459,8 +3825,11 @@ typedef $$TodosTableCreateCompanionBuilder = TodosCompanion Function({
 typedef $$TodosTableUpdateCompanionBuilder = TodosCompanion Function({
   Value<int> id,
   Value<String> uuid,
+  Value<int?> ownerUserId,
+  Value<bool> canEdit,
   Value<String> title,
   Value<String?> notes,
+  Value<String?> groupName,
   Value<bool> done,
   Value<DateTime?> doneAt,
   Value<TodoPriority> priority,
@@ -3490,6 +3859,16 @@ class $$TodosTableFilterComposer extends Composer<_$AppDatabase, $TodosTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get canEdit => $composableBuilder(
+    column: $table.canEdit,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnFilters(column),
@@ -3497,6 +3876,11 @@ class $$TodosTableFilterComposer extends Composer<_$AppDatabase, $TodosTable> {
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get groupName => $composableBuilder(
+    column: $table.groupName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3566,6 +3950,16 @@ class $$TodosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get canEdit => $composableBuilder(
+    column: $table.canEdit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
@@ -3573,6 +3967,11 @@ class $$TodosTableOrderingComposer
 
   ColumnOrderings<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get groupName => $composableBuilder(
+    column: $table.groupName,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3637,11 +4036,22 @@ class $$TodosTableAnnotationComposer
   GeneratedColumn<String> get uuid =>
       $composableBuilder(column: $table.uuid, builder: (column) => column);
 
+  GeneratedColumn<int> get ownerUserId => $composableBuilder(
+    column: $table.ownerUserId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get canEdit =>
+      $composableBuilder(column: $table.canEdit, builder: (column) => column);
+
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get groupName =>
+      $composableBuilder(column: $table.groupName, builder: (column) => column);
 
   GeneratedColumn<bool> get done =>
       $composableBuilder(column: $table.done, builder: (column) => column);
@@ -3703,8 +4113,11 @@ class $$TodosTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> uuid = const Value.absent(),
+                Value<int?> ownerUserId = const Value.absent(),
+                Value<bool> canEdit = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> groupName = const Value.absent(),
                 Value<bool> done = const Value.absent(),
                 Value<DateTime?> doneAt = const Value.absent(),
                 Value<TodoPriority> priority = const Value.absent(),
@@ -3717,8 +4130,11 @@ class $$TodosTableTableManager
               }) => TodosCompanion(
                 id: id,
                 uuid: uuid,
+                ownerUserId: ownerUserId,
+                canEdit: canEdit,
                 title: title,
                 notes: notes,
+                groupName: groupName,
                 done: done,
                 doneAt: doneAt,
                 priority: priority,
@@ -3733,8 +4149,11 @@ class $$TodosTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String uuid,
+                Value<int?> ownerUserId = const Value.absent(),
+                Value<bool> canEdit = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> groupName = const Value.absent(),
                 Value<bool> done = const Value.absent(),
                 Value<DateTime?> doneAt = const Value.absent(),
                 Value<TodoPriority> priority = const Value.absent(),
@@ -3747,8 +4166,11 @@ class $$TodosTableTableManager
               }) => TodosCompanion.insert(
                 id: id,
                 uuid: uuid,
+                ownerUserId: ownerUserId,
+                canEdit: canEdit,
                 title: title,
                 notes: notes,
+                groupName: groupName,
                 done: done,
                 doneAt: doneAt,
                 priority: priority,

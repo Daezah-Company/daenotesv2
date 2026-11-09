@@ -27,7 +27,7 @@ class ApiClient {
   /// Override with `--dart-define=DAENOTES_API_URL=https://…`.
   static const String defaultBaseUrl = String.fromEnvironment(
     'DAENOTES_API_URL',
-    defaultValue: 'http://localhost:8000/api',
+    defaultValue: 'https://apidaenotes.daezah.com/api',
   );
 
   final Dio dio;
@@ -47,8 +47,54 @@ class ApiClient {
 
   Future<void> logout() => dio.post('/auth/logout');
 
+  // ------------------------------------------------------ collaboration
+
+  Future<Map<String, dynamic>> collaborators(String type, String uuid) async {
+    final data = _data(await dio.get('/collaboration/$type/$uuid')) as Map;
+    return data.cast<String, dynamic>();
+  }
+
+  Future<Map<String, dynamic>> shareItem(
+    String type,
+    String uuid,
+    String email, {
+    String permission = 'editor',
+  }) async {
+    final data = _data(
+      await dio.post(
+        '/collaboration/$type/$uuid',
+        data: {'email': email, 'permission': permission},
+      ),
+    ) as Map;
+    return data.cast<String, dynamic>();
+  }
+
+  Future<void> updateSharePermission(
+    String type,
+    String uuid,
+    int userId,
+    String permission,
+  ) async {
+    await dio.put(
+      '/collaboration/$type/$uuid/$userId',
+      data: {'permission': permission},
+    );
+  }
+
+  Future<void> revokeShare(String type, String uuid, int userId) async {
+    await dio.delete('/collaboration/$type/$uuid/$userId');
+  }
+
   Future<Map<String, dynamic>> me() async {
-    final data = _data(await dio.get('/auth/me'));
+    final data = _data(
+      await dio.get(
+        '/auth/me',
+        options: Options(
+          connectTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ),
+      ),
+    );
     return (data as Map).cast<String, dynamic>();
   }
 
@@ -155,7 +201,12 @@ class _BearerInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (err.response?.statusCode == 401) {
+    final path = err.requestOptions.path;
+    final isPublicAuthRequest =
+        path.endsWith('/auth/login') ||
+        path.endsWith('/auth/register') ||
+        path.endsWith('/auth/me');
+    if (err.response?.statusCode == 401 && !isPublicAuthRequest) {
       // Expired/invalid token: drop it and push the app back to login.
       tokens.clear();
       onUnauthorized?.call();

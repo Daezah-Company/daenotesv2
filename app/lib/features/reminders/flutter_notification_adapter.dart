@@ -37,6 +37,7 @@ class FlutterNotificationAdapter implements NotificationAdapter {
       _channelId,
       'Pengingat',
       channelDescription: 'Pengingat untuk catatan dan todo',
+      icon: 'daenotes_notification',
       importance: Importance.high,
       priority: Priority.high,
     ),
@@ -48,7 +49,9 @@ class FlutterNotificationAdapter implements NotificationAdapter {
     tzdata.initializeTimeZones();
     await _plugin.initialize(
       settings: InitializationSettings(
-        android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
+        android: const AndroidInitializationSettings(
+          'daenotes_notification',
+        ),
         iOS: const DarwinInitializationSettings(),
       ),
       onDidReceiveNotificationResponse: _onResponse,
